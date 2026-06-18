@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Edit2, Plus, Save, Trash2, X } from 'lucide-react';
-import { createId } from '../services/storage';
+import { createId } from '../services/supabaseService';
 import { displayTeam } from '../utils/localization';
 
 const emptyMatch = {

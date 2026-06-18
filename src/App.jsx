@@ -22,9 +22,14 @@ import RankingTable from './components/RankingTable';
 import RulesPanel from './components/RulesPanel';
 import SearchPanel from './components/SearchPanel';
 import TournamentPredictionPanel from './components/TournamentPredictionPanel';
-import { loadState, resetState, saveState } from './services/storage';
+import { defaultSettings } from './data/sampleData';
+import {
+  isSupabaseConfigured,
+  loadSupabaseState,
+  saveScoreDetails,
+  saveStateSection
+} from './services/supabaseService';
 import { downloadCsv } from './utils/exportCsv';
-import { importMatches, parseMatchFile } from './utils/importMatches';
 import { buildRanking, calculateCollection, calculatePrizes } from './utils/scoring';
 
 const tabs = [
@@ -40,165 +45,79 @@ const tabs = [
   { id: 'admin', label: 'Administración', icon: ShieldCheck }
 ];
 
-const OFFICIAL_CALENDAR_FILE = '/mundial2026_matches_completo.csv';
-const FIRST_ROUND_PREDICTIONS_FILE = '/first_round_predictions.json';
-const MASTER_STATE_FILE = '/master_state.json';
-
-const hasMasterState = (state) =>
-  state.participants?.length >= 21 &&
-  state.predictions?.filter((prediction) => prediction.id?.startsWith('master-')).length >= 2184 &&
-  Object.values(state.tournamentEntries ?? {}).filter((entry) => Object.keys(entry.matchPredictions ?? {}).length >= 104).length >= 21;
-
-const hasFirstRoundPredictions = (tournamentEntries = {}) => {
-  const entries = Object.values(tournamentEntries);
-  return entries.filter((entry) => Object.keys(entry.matchPredictions ?? {}).length >= 72).length >= 19;
+const emptyState = {
+  participants: [],
+  matches: [],
+  predictions: [],
+  tournamentEntries: {},
+  finalPredictions: {},
+  finalResults: { champion: '', second: '', third: '', fourth: '' },
+  importAudits: [],
+  payments: [],
+  scoreDetails: [],
+  settings: defaultSettings
 };
 
-const hasFlatGroupPredictions = (predictions = []) =>
-  predictions.filter((prediction) => prediction.id?.startsWith('group-import-')).length >= 1300;
+const paymentsFromParticipants = (participants, entryFee) =>
+  participants.map((participant) => ({
+    id: participant.id,
+    participantId: participant.id,
+    paid: Boolean(participant.paid),
+    paymentMethod: participant.paymentMethod ?? '',
+    amount: participant.paid ? Number(entryFee) : 0,
+    paidAt: ''
+  }));
 
-const hasMasterPredictions = (predictions = []) =>
-  predictions.filter((prediction) => prediction.id?.startsWith('master-')).length >= 2184;
-
-const buildFlatGroupPredictions = (tournamentEntries = {}, matches = []) => {
-  const groupMatchesByNumber = new Map(
-    matches
-      .filter((match) => match.stage === 'Fase de grupos')
-      .map((match) => [String(match.matchNumber), match])
-  );
-
-  return Object.entries(tournamentEntries).flatMap(([participantId, entry]) =>
-    Object.entries(entry.matchPredictions ?? {}).flatMap(([matchNumber, prediction]) => {
-      const match = groupMatchesByNumber.get(String(matchNumber));
-      if (!match || prediction.homeScore === undefined || prediction.awayScore === undefined) return [];
-
-      return [
-        {
-          id: `group-import-${participantId}-${match.id}`,
-          participantId,
-          matchId: match.id,
-          homeScore: Number(prediction.homeScore),
-          awayScore: Number(prediction.awayScore),
-          qualifiedTeam: '',
-          penaltyWinner: '',
-          predictedHomeTeam: match.homeTeam,
-          predictedAwayTeam: match.awayTeam,
-          createdAt: new Date().toISOString()
-        }
-      ];
-    })
-  );
-};
+const enrichPredictionsForSupabase = (predictions, matches) =>
+  predictions.map((prediction) => {
+    const match = matches.find((item) => item.id === prediction.matchId);
+    return {
+      ...prediction,
+      phase: prediction.phase ?? match?.stage ?? '',
+      groupName: prediction.groupName ?? match?.group ?? '',
+      predictedHomeTeam: prediction.predictedHomeTeam ?? match?.homeTeam ?? '',
+      predictedAwayTeam: prediction.predictedAwayTeam ?? match?.awayTeam ?? ''
+    };
+  });
 
 function App() {
-  const [state, setState] = useState(loadState);
+  const [state, setState] = useState(emptyState);
   const [activeTab, setActiveTab] = useState('ranking');
   const [adminPassword, setAdminPassword] = useState('');
   const [adminError, setAdminError] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
-  const [currentParticipantId, setCurrentParticipantId] = useState(state.participants[0]?.id ?? '');
-
-  const loadOfficialCalendar = async ({ force = false } = {}) => {
-    const response = await fetch(OFFICIAL_CALENDAR_FILE);
-    if (!response.ok) return;
-
-    const rawMatches = parseMatchFile(await response.text(), 'mundial2026_matches_completo.csv');
-    const result = importMatches(rawMatches, []);
-
-    if (result.imported.length !== 104 || result.errors.length) return;
-
-    setState((current) => {
-      const hasCsvCalendar =
-        current.matches.length === 104 &&
-        current.matches.some((match) => Number(match.matchNumber) === 104) &&
-        !current.matches.some((match) => match.homeTeam === 'Colombia' && match.awayTeam === 'Brasil');
-
-      if (!force && hasCsvCalendar) return current;
-
-      return {
-        ...current,
-        matches: result.imported,
-        predictions: [],
-        tournamentEntries: {}
-      };
-    });
-  };
-
-  const loadFirstRoundPredictions = async ({ force = false } = {}) => {
-    const response = await fetch(FIRST_ROUND_PREDICTIONS_FILE);
-    if (!response.ok) return;
-
-    const firstRoundEntries = await response.json();
-
-    setState((current) => {
-      if (!force && hasFirstRoundPredictions(current.tournamentEntries)) return current;
-
-      return {
-        ...current,
-        tournamentEntries: {
-          ...(force ? {} : current.tournamentEntries),
-          ...firstRoundEntries
-        }
-      };
-    });
-  };
-
-  const loadMasterState = async ({ force = false } = {}) => {
-    const response = await fetch(MASTER_STATE_FILE);
-    if (!response.ok) return;
-
-    const masterState = await response.json();
-
-    setState((current) => {
-      if (!force && hasMasterState(current)) return current;
-
-      return {
-        ...current,
-        ...masterState,
-        settings: {
-          ...current.settings,
-          ...(masterState.settings ?? {})
-        }
-      };
-    });
-    setCurrentParticipantId(masterState.participants?.[0]?.id ?? '');
-  };
+  const [currentParticipantId, setCurrentParticipantId] = useState('');
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [connectionError, setConnectionError] = useState('');
+  const [saveError, setSaveError] = useState('');
 
   useEffect(() => {
     const loadInitialData = async () => {
-      await loadOfficialCalendar();
-      await loadMasterState();
+      if (!isSupabaseConfigured) {
+        setConnectionError('Configura VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY para conectar Supabase.');
+        setIsLoadingData(false);
+        return;
+      }
+
+      try {
+        const supabaseState = await loadSupabaseState();
+        setState({
+          ...emptyState,
+          ...supabaseState,
+          finalPredictions: supabaseState.settings.finalPredictions ?? supabaseState.finalPredictions ?? {},
+          finalResults: supabaseState.settings.finalResults ?? supabaseState.finalResults ?? emptyState.finalResults
+        });
+        setCurrentParticipantId(supabaseState.participants[0]?.id ?? '');
+        setConnectionError('');
+      } catch (error) {
+        setConnectionError(error.message ?? 'No se pudo cargar la información desde Supabase.');
+      } finally {
+        setIsLoadingData(false);
+      }
     };
 
     loadInitialData();
   }, []);
-
-  useEffect(() => {
-    saveState(state);
-  }, [state]);
-
-  useEffect(() => {
-    if (hasMasterPredictions(state.predictions) || !hasFirstRoundPredictions(state.tournamentEntries) || hasFlatGroupPredictions(state.predictions)) return;
-
-    const importedPredictions = buildFlatGroupPredictions(state.tournamentEntries, state.matches);
-    if (!importedPredictions.length) return;
-
-    setState((current) => {
-      if (hasFlatGroupPredictions(current.predictions)) return current;
-
-      const importedKeys = new Set(
-        importedPredictions.map((prediction) => `${prediction.participantId}-${prediction.matchId}`)
-      );
-      const preservedPredictions = current.predictions.filter(
-        (prediction) => !importedKeys.has(`${prediction.participantId}-${prediction.matchId}`)
-      );
-
-      return {
-        ...current,
-        predictions: [...preservedPredictions, ...importedPredictions]
-      };
-    });
-  }, [state.matches, state.predictions, state.tournamentEntries]);
 
   const ranking = useMemo(
     () =>
@@ -223,7 +142,93 @@ function App() {
     [ranking, collection.collectedTotal, state.settings]
   );
 
-  const updateState = (partial) => setState((current) => ({ ...current, ...partial }));
+  useEffect(() => {
+    if (isLoadingData || connectionError) return;
+
+    const scoreDetails = ranking.flatMap((participant) =>
+      (participant.pointsDetail ?? []).map((detail) => ({
+        participantId: participant.id,
+        phase: detail.fase,
+        totalPoints: detail.puntos_total_fase,
+        detail
+      }))
+    );
+
+    if (!scoreDetails.length) return;
+
+    saveScoreDetails(scoreDetails).catch((error) => {
+      setSaveError(error.message ?? 'No se pudo guardar el detalle de puntos.');
+    });
+  }, [ranking, isLoadingData, connectionError]);
+
+  const persistSection = async (section, value) => {
+    try {
+      setSaveError('');
+      await saveStateSection(section, value);
+    } catch (error) {
+      setSaveError(error.message ?? `No se pudo guardar ${section} en Supabase.`);
+    }
+  };
+
+  const updateState = (partial, persistKeys = Object.keys(partial)) => {
+    setState((current) => ({ ...current, ...partial }));
+    persistKeys.forEach((key) => {
+      if (key === 'participants') {
+        persistSection('participants', partial.participants);
+        persistSection('payments', paymentsFromParticipants(partial.participants, state.settings.entryFee));
+        return;
+      }
+
+      if (key === 'predictions') {
+        persistSection('predictions', enrichPredictionsForSupabase(partial.predictions, state.matches));
+        return;
+      }
+
+      persistSection(key, partial[key]);
+    });
+  };
+
+  const updateFinalPredictions = (finalPredictions) => {
+    const nextSettings = { ...state.settings, finalPredictions };
+    setState((current) => ({ ...current, finalPredictions, settings: nextSettings }));
+    persistSection('settings', nextSettings);
+  };
+
+  const updateFinalResults = (finalResults) => {
+    const nextSettings = { ...state.settings, finalResults };
+    setState((current) => ({ ...current, finalResults, settings: nextSettings }));
+    persistSection('settings', nextSettings);
+  };
+
+  const updateSettingsState = (settings) => {
+    const nextSettings = {
+      ...settings,
+      finalPredictions: state.finalPredictions,
+      finalResults: state.finalResults
+    };
+    setState((current) => ({ ...current, settings: nextSettings }));
+    persistSection('settings', nextSettings);
+    persistSection('payments', paymentsFromParticipants(state.participants, nextSettings.entryFee));
+  };
+
+  const reloadFromSupabase = async () => {
+    setIsLoadingData(true);
+    try {
+      const supabaseState = await loadSupabaseState();
+      setState({
+        ...emptyState,
+        ...supabaseState,
+        finalPredictions: supabaseState.settings.finalPredictions ?? {},
+        finalResults: supabaseState.settings.finalResults ?? emptyState.finalResults
+      });
+      setCurrentParticipantId(supabaseState.participants[0]?.id ?? '');
+      setConnectionError('');
+    } catch (error) {
+      setConnectionError(error.message ?? 'No se pudo recargar la información desde Supabase.');
+    } finally {
+      setIsLoadingData(false);
+    }
+  };
 
   const exportAll = () => {
     downloadCsv('polla-mundialista-ranking.csv', [
@@ -268,9 +273,7 @@ function App() {
   };
 
   const handleReset = () => {
-    setState(resetState());
-    setCurrentParticipantId(sampleCurrentParticipantId(state));
-    loadOfficialCalendar({ force: true }).then(() => loadMasterState({ force: true }));
+    reloadFromSupabase();
   };
 
   const ActiveIcon = tabs.find((tab) => tab.id === activeTab)?.icon ?? Trophy;
@@ -352,11 +355,15 @@ function App() {
               onChange={(event) => setCurrentParticipantId(event.target.value)}
               value={currentParticipantId}
             >
-              {state.participants.map((participant) => (
-                <option key={participant.id} value={participant.id}>
-                  {participant.name}
-                </option>
-              ))}
+              {state.participants.length ? (
+                state.participants.map((participant) => (
+                  <option key={participant.id} value={participant.id}>
+                    {participant.name}
+                  </option>
+                ))
+              ) : (
+                <option value="">Sin participantes</option>
+              )}
             </select>
             <button className="secondary-button" onClick={exportAll} type="button">
               <Download size={18} />
@@ -365,7 +372,11 @@ function App() {
           </div>
         </header>
 
-        {activeTab === 'ranking' && <RankingTable collection={collection} prizes={prizes} ranking={ranking} />}
+        {isLoadingData && <div className="notice">Cargando datos desde Supabase...</div>}
+        {connectionError && <div className="notice error-notice">{connectionError}</div>}
+        {saveError && <div className="notice error-notice">{saveError}</div>}
+
+        {!isLoadingData && activeTab === 'ranking' && <RankingTable collection={collection} prizes={prizes} ranking={ranking} />}
         {activeTab === 'polla' && (
           <TournamentPredictionPanel
             currentParticipantId={currentParticipantId}
@@ -386,7 +397,7 @@ function App() {
             participants={state.participants}
             predictions={state.predictions}
             settings={state.settings}
-            updateFinalPredictions={(finalPredictions) => updateState({ finalPredictions })}
+            updateFinalPredictions={updateFinalPredictions}
             updatePredictions={(predictions) => updateState({ predictions })}
           />
         )}
@@ -422,7 +433,7 @@ function App() {
           <RulesPanel
             isAdmin={isAdmin}
             settings={state.settings}
-            updateSettings={(settings) => updateState({ settings })}
+            updateSettings={updateSettingsState}
           />
         )}
         {activeTab === 'importar' && (
@@ -451,14 +462,20 @@ function App() {
             setAdminError={setAdminError}
             setAdminPassword={setAdminPassword}
             settings={state.settings}
-            updateFinalResults={(finalResults) => updateState({ finalResults })}
+            updateFinalResults={updateFinalResults}
             updateMasterState={(nextState) => {
               setState((current) => ({ ...current, ...nextState }));
               setCurrentParticipantId(nextState.participants[0]?.id ?? '');
+              persistSection('participants', nextState.participants ?? []);
+              persistSection('payments', paymentsFromParticipants(nextState.participants ?? [], nextState.settings?.entryFee ?? state.settings.entryFee));
+              persistSection('matches', nextState.matches ?? []);
+              persistSection('predictions', enrichPredictionsForSupabase(nextState.predictions ?? [], nextState.matches ?? []));
+              persistSection('tournamentEntries', nextState.tournamentEntries ?? {});
+              persistSection('settings', nextState.settings ?? state.settings);
             }}
             updateMatches={(matches) => updateState({ matches })}
             updateParticipants={(participants) => updateState({ participants })}
-            updateSettings={(settings) => updateState({ settings })}
+            updateSettings={updateSettingsState}
             updateTournamentEntries={(tournamentEntries) => updateState({ tournamentEntries })}
           />
         )}
@@ -466,7 +483,5 @@ function App() {
     </div>
   );
 }
-
-const sampleCurrentParticipantId = (state) => state.participants[0]?.id ?? '';
 
 export default App;

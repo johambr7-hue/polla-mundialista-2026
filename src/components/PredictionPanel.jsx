@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Lock, Save } from 'lucide-react';
-import { createId } from '../services/storage';
+import { createId } from '../services/supabaseService';
 import {
   calculatePredictionBreakdown,
   calculatePredictionPoints,

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Edit2, Plus, Save, Trash2, X } from 'lucide-react';
-import { createId } from '../services/storage';
+import { createId } from '../services/supabaseService';
 
 const emptyForm = { name: '', email: '', phone: '', paid: false, paymentMethod: '' };
 
