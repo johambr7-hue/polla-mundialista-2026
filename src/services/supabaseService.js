@@ -231,13 +231,29 @@ export const saveParticipants = async (participants) =>
   (await upsertRows('participants', participants.map(participantToRow))).map(participantFromRow);
 
 export const deleteParticipant = async (participantId) => {
+  if (!participantId) {
+    throw new Error('No se puede eliminar el participante: participantId está vacío.');
+  }
+
   if (!isUuid(participantId)) {
-    throw new Error('No se puede eliminar el participante porque no tiene un UUID válido de Supabase.');
+    throw new Error(`No se puede eliminar el participante: "${participantId}" no es un UUID válido de Supabase.`);
   }
 
   const client = requireSupabase();
   const { error } = await client.from('participants').delete().eq('id', participantId);
   if (error) throw error;
+
+  const { data: stillExists, error: verifyError } = await client
+    .from('participants')
+    .select('id')
+    .eq('id', participantId)
+    .maybeSingle();
+
+  if (verifyError) throw verifyError;
+  if (stillExists) {
+    throw new Error(`Supabase no eliminó el participante ${participantId}. Revisa las políticas RLS de DELETE en participants.`);
+  }
+
   return participantId;
 };
 

@@ -81,6 +81,12 @@ const enrichPredictionsForSupabase = (predictions, matches) =>
     };
   });
 
+const formatError = (error, fallback) => {
+  if (!error) return fallback;
+  const parts = [error.message, error.details, error.hint, error.code].filter(Boolean);
+  return parts.length ? parts.join(' | ') : String(error);
+};
+
 function App() {
   const [state, setState] = useState(emptyState);
   const [activeTab, setActiveTab] = useState('ranking');
@@ -92,32 +98,41 @@ function App() {
   const [connectionError, setConnectionError] = useState('');
   const [saveError, setSaveError] = useState('');
 
+  const loadData = async ({ preferredParticipantId = currentParticipantId, showLoading = false } = {}) => {
+    if (showLoading) setIsLoadingData(true);
+
+    if (!isSupabaseConfigured) {
+      setConnectionError('Configura VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY para conectar Supabase.');
+      setIsLoadingData(false);
+      return null;
+    }
+
+    try {
+      const supabaseState = await loadSupabaseState();
+      const nextState = {
+        ...emptyState,
+        ...supabaseState,
+        finalPredictions: supabaseState.settings.finalPredictions ?? supabaseState.finalPredictions ?? {},
+        finalResults: supabaseState.settings.finalResults ?? supabaseState.finalResults ?? emptyState.finalResults
+      };
+      setState(nextState);
+      setCurrentParticipantId(
+        nextState.participants.some((participant) => participant.id === preferredParticipantId)
+          ? preferredParticipantId
+          : nextState.participants[0]?.id ?? ''
+      );
+      setConnectionError('');
+      return nextState;
+    } catch (error) {
+      setConnectionError(formatError(error, 'No se pudo cargar la información desde Supabase.'));
+      return null;
+    } finally {
+      setIsLoadingData(false);
+    }
+  };
+
   useEffect(() => {
-    const loadInitialData = async () => {
-      if (!isSupabaseConfigured) {
-        setConnectionError('Configura VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY para conectar Supabase.');
-        setIsLoadingData(false);
-        return;
-      }
-
-      try {
-        const supabaseState = await loadSupabaseState();
-        setState({
-          ...emptyState,
-          ...supabaseState,
-          finalPredictions: supabaseState.settings.finalPredictions ?? supabaseState.finalPredictions ?? {},
-          finalResults: supabaseState.settings.finalResults ?? supabaseState.finalResults ?? emptyState.finalResults
-        });
-        setCurrentParticipantId(supabaseState.participants[0]?.id ?? '');
-        setConnectionError('');
-      } catch (error) {
-        setConnectionError(error.message ?? 'No se pudo cargar la información desde Supabase.');
-      } finally {
-        setIsLoadingData(false);
-      }
-    };
-
-    loadInitialData();
+    loadData({ preferredParticipantId: '', showLoading: true });
   }, []);
 
   const ranking = useMemo(
@@ -158,7 +173,7 @@ function App() {
     if (!scoreDetails.length) return;
 
     saveScoreDetails(scoreDetails).catch((error) => {
-      setSaveError(error.message ?? 'No se pudo guardar el detalle de puntos.');
+      setSaveError(formatError(error, 'No se pudo guardar el detalle de puntos.'));
     });
   }, [ranking, isLoadingData, connectionError]);
 
@@ -183,7 +198,7 @@ function App() {
         setState((current) => ({ ...current, predictions: savedValue }));
       }
     } catch (error) {
-      setSaveError(error.message ?? `No se pudo guardar ${section} en Supabase.`);
+      setSaveError(formatError(error, `No se pudo guardar ${section} en Supabase.`));
     }
   };
 
@@ -228,41 +243,19 @@ function App() {
   };
 
   const reloadFromSupabase = async () => {
-    setIsLoadingData(true);
-    try {
-      const supabaseState = await loadSupabaseState();
-      setState({
-        ...emptyState,
-        ...supabaseState,
-        finalPredictions: supabaseState.settings.finalPredictions ?? {},
-        finalResults: supabaseState.settings.finalResults ?? emptyState.finalResults
-      });
-      setCurrentParticipantId(supabaseState.participants[0]?.id ?? '');
-      setConnectionError('');
-    } catch (error) {
-      setConnectionError(error.message ?? 'No se pudo recargar la información desde Supabase.');
-    } finally {
-      setIsLoadingData(false);
-    }
+    await loadData({ preferredParticipantId: currentParticipantId, showLoading: true });
   };
 
   const deleteParticipant = async (participantId) => {
     try {
       setSaveError('');
       await deleteParticipantFromSupabase(participantId);
-      setState((current) => ({
-        ...current,
-        participants: current.participants.filter((participant) => participant.id !== participantId),
-        predictions: current.predictions.filter((prediction) => prediction.participantId !== participantId),
-        payments: current.payments.filter((payment) => payment.participantId !== participantId),
-        tournamentEntries: Object.fromEntries(
-          Object.entries(current.tournamentEntries ?? {}).filter(([entryParticipantId]) => entryParticipantId !== participantId)
-        )
-      }));
-      if (currentParticipantId === participantId) setCurrentParticipantId('');
-      await reloadFromSupabase();
+      await loadData({
+        preferredParticipantId: currentParticipantId === participantId ? '' : currentParticipantId,
+        showLoading: true
+      });
     } catch (error) {
-      setSaveError(error.message ?? 'No se pudo eliminar el participante en Supabase.');
+      setSaveError(formatError(error, 'No se pudo eliminar el participante en Supabase.'));
     }
   };
 

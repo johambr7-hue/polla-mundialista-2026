@@ -44,9 +44,10 @@ function ParticipantPanel({ deleteParticipant, isAdmin, participants, updatePart
     );
   };
 
-  const removeParticipant = (participantId) => {
+  const removeParticipant = (participant) => {
     if (!window.confirm('¿Seguro que deseas eliminar este participante?')) return;
-    deleteParticipant(participantId);
+    console.log('Eliminando participante', participant.id);
+    deleteParticipant(participant.id);
   };
 
   return (
@@ -170,7 +171,7 @@ function ParticipantPanel({ deleteParticipant, isAdmin, participants, updatePart
                 <button
                   className="icon-button danger"
                   disabled={!isAdmin || !participant.id}
-                  onClick={() => removeParticipant(participant.id)}
+                  onClick={() => removeParticipant(participant)}
                   type="button"
                   title="Eliminar participante"
                 >
