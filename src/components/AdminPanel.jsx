@@ -401,7 +401,9 @@ function AdminPanel({
 
     setInitialMigration({ loading: true, summary: null, error: '', status: 'Preparando migración inicial...' });
     try {
-      const summary = await migrateInitialData();
+      const summary = await migrateInitialData((status) => {
+        setInitialMigration((current) => ({ ...current, status }));
+      });
       setInitialMigration({
         loading: false,
         summary,
@@ -497,7 +499,8 @@ function AdminPanel({
           <div className="notice success-notice">
             Migración lista: {initialMigration.summary.participantsCreated} participantes creados,{' '}
             {initialMigration.summary.participantsUpdated} actualizados, {initialMigration.summary.matchesCreated} partidos creados,{' '}
-            {initialMigration.summary.predictionsCreated} predicciones creadas.
+            {initialMigration.summary.predictionsCreated} predicciones creadas y{' '}
+            {initialMigration.summary.duplicatePredictionsDeleted ?? 0} duplicadas limpiadas.
           </div>
         )}
       </div>
@@ -585,6 +588,10 @@ function AdminPanel({
               <article>
                 <span>Pagos creados</span>
                 <strong>{initialMigration.summary.paymentsCreated}</strong>
+              </article>
+              <article>
+                <span>Predicciones duplicadas limpiadas</span>
+                <strong>{initialMigration.summary.duplicatePredictionsDeleted ?? 0}</strong>
               </article>
               <article>
                 <span>Registros omitidos</span>

@@ -261,8 +261,9 @@ function App() {
     }
   };
 
-  const migrateInitialData = async () => {
+  const migrateInitialData = async (onProgress = () => {}) => {
     setSaveError('');
+    onProgress('Revisando datos existentes en Supabase...');
     const counts = await getSupabaseDataCounts();
     if (
       (counts.participants > 0 || counts.matches > 0) &&
@@ -271,11 +272,14 @@ function App() {
       return null;
     }
 
+    onProgress('Leyendo archivo maestro local...');
     const response = await fetch('/master_state.json');
     if (!response.ok) throw new Error('No se pudo leer master_state.json para la migración inicial.');
 
     const sourceState = await response.json();
-    const summary = await migrateInitialDataToSupabase(sourceState);
+    onProgress('Enviando datos a Supabase...');
+    const summary = await migrateInitialDataToSupabase(sourceState, onProgress);
+    onProgress('Recargando información desde Supabase...');
     await loadData({ preferredParticipantId: currentParticipantId, showLoading: true });
     return summary;
   };

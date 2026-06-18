@@ -18,6 +18,8 @@ const fromNullableNumber = (value) => (value === null || value === undefined ? '
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const isUuid = (value) => uuidPattern.test(String(value ?? ''));
 const withUuid = (row, id) => (isUuid(id) ? { id, ...row } : row);
+const READ_PAGE_SIZE = 1000;
+const WRITE_BATCH_SIZE = 250;
 const normalizeName = (value) =>
   String(value ?? '')
     .trim()
@@ -197,11 +199,34 @@ const scoreDetailToRow = (detail) => withUuid({
   detail: detail.detailData ?? detail.detail ?? detail
 }, detail.id);
 
+const chunkRows = (rows, size = WRITE_BATCH_SIZE) => {
+  const chunks = [];
+  for (let index = 0; index < rows.length; index += size) {
+    chunks.push(rows.slice(index, index + size));
+  }
+  return chunks;
+};
+
 const selectAll = async (table, order = 'id') => {
   const client = requireSupabase();
-  const { data, error } = await client.from(table).select('*').order(order, { ascending: true });
-  if (error) throw error;
-  return data ?? [];
+  const rows = [];
+  let from = 0;
+
+  while (true) {
+    const { data, error } = await client
+      .from(table)
+      .select('*')
+      .order(order, { ascending: true })
+      .range(from, from + READ_PAGE_SIZE - 1);
+
+    if (error) throw error;
+    rows.push(...(data ?? []));
+
+    if (!data || data.length < READ_PAGE_SIZE) break;
+    from += READ_PAGE_SIZE;
+  }
+
+  return rows;
 };
 
 const upsertRows = async (table, rows) => {
@@ -209,9 +234,14 @@ const upsertRows = async (table, rows) => {
   const payload = Array.isArray(rows) ? rows : [rows];
   if (!payload.length) return [];
 
-  const { data, error } = await client.from(table).upsert(payload).select();
-  if (error) throw error;
-  return data ?? [];
+  const saved = [];
+  for (const chunk of chunkRows(payload)) {
+    const { data, error } = await client.from(table).upsert(chunk).select();
+    if (error) throw error;
+    saved.push(...(data ?? []));
+  }
+
+  return saved;
 };
 
 const replaceRows = async (table, rows, toRow, deleteColumn = 'id') => {
@@ -220,9 +250,23 @@ const replaceRows = async (table, rows, toRow, deleteColumn = 'id') => {
   const { error: deleteError } = await client.from(table).delete().not(deleteColumn, 'is', null);
   if (deleteError) throw deleteError;
   if (!payload.length) return [];
-  const { data, error } = await client.from(table).insert(payload).select();
-  if (error) throw error;
-  return data ?? [];
+  const saved = [];
+  for (const chunk of chunkRows(payload)) {
+    const { data, error } = await client.from(table).insert(chunk).select();
+    if (error) throw error;
+    saved.push(...(data ?? []));
+  }
+
+  return saved;
+};
+
+const deleteRowsByIds = async (table, ids) => {
+  const client = requireSupabase();
+  const validIds = ids.filter(isUuid);
+  for (const chunk of chunkRows(validIds)) {
+    const { error } = await client.from(table).delete().in('id', chunk);
+    if (error) throw error;
+  }
 };
 
 const hasPredictionUuids = (prediction) => isUuid(prediction.participantId) && isUuid(prediction.matchId);
@@ -410,7 +454,7 @@ export const getSupabaseDataCounts = async () => {
   };
 };
 
-export const migrateInitialDataToSupabase = async (sourceState) => {
+export const migrateInitialDataToSupabase = async (sourceState, onProgress = () => {}) => {
   const summary = {
     participantsCreated: 0,
     participantsUpdated: 0,
@@ -424,6 +468,7 @@ export const migrateInitialDataToSupabase = async (sourceState) => {
     tournamentPredictionsUpdated: 0,
     scoreDetailsCreated: 0,
     scoreDetailsUpdated: 0,
+    duplicatePredictionsDeleted: 0,
     errors: [],
     omitted: []
   };
@@ -436,6 +481,7 @@ export const migrateInitialDataToSupabase = async (sourceState) => {
   const settings = { ...defaultSettings, ...(sourceState.settings ?? {}) };
   const finalResults = sourceState.finalResults ?? { champion: '', second: '', third: '', fourth: '' };
 
+  onProgress('Consultando registros actuales en Supabase...');
   const [
     existingParticipants,
     existingMatches,
@@ -454,7 +500,25 @@ export const migrateInitialDataToSupabase = async (sourceState) => {
     existingParticipants.map((row) => [row.normalized_name || normalizeName(row.name), row])
   );
   const matchesByCode = new Map(existingMatches.map((row) => [row.match_code || `match-${row.match_number}`, row]));
-  const predictionsByPair = new Map(existingPredictions.map((row) => [`${row.participant_id}|${row.match_id}`, row]));
+  const duplicatePredictionIds = [];
+  const predictionsByPair = new Map();
+  existingPredictions.forEach((row) => {
+    const key = `${row.participant_id}|${row.match_id}`;
+    if (predictionsByPair.has(key)) {
+      duplicatePredictionIds.push(row.id);
+      return;
+    }
+    predictionsByPair.set(key, row);
+  });
+  if (duplicatePredictionIds.length) {
+    onProgress(`Limpiando predicciones duplicadas (${duplicatePredictionIds.length})...`);
+    try {
+      await deleteRowsByIds('predictions', duplicatePredictionIds);
+      summary.duplicatePredictionsDeleted = duplicatePredictionIds.length;
+    } catch (error) {
+      summary.errors.push(`No se pudieron limpiar predicciones duplicadas: ${error.message}`);
+    }
+  }
   const paymentsByParticipant = new Map(existingPayments.map((row) => [row.participant_id, row]));
   const tournamentByParticipant = new Map(existingTournamentPredictions.map((row) => [row.participant_id, row]));
   const participantIdMap = new Map();
@@ -462,7 +526,8 @@ export const migrateInitialDataToSupabase = async (sourceState) => {
   const matchIdMap = new Map();
   const matchCodeMap = new Map();
 
-  for (const participant of participants) {
+  onProgress(`Migrando participantes (0/${participants.length})...`);
+  for (const [index, participant] of participants.entries()) {
     try {
       const normalizedName = normalizeName(participant.name);
       if (!normalizedName) {
@@ -486,9 +551,14 @@ export const migrateInitialDataToSupabase = async (sourceState) => {
     } catch (error) {
       summary.errors.push(`Participante ${participant.name ?? participant.id}: ${error.message}`);
     }
+
+    if ((index + 1) % 5 === 0 || index + 1 === participants.length) {
+      onProgress(`Migrando participantes (${index + 1}/${participants.length})...`);
+    }
   }
 
-  for (const match of matches) {
+  onProgress(`Migrando partidos (0/${matches.length})...`);
+  for (const [index, match] of matches.entries()) {
     try {
       const matchCode = getMatchCode(match);
       if (!matchCode) {
@@ -512,9 +582,15 @@ export const migrateInitialDataToSupabase = async (sourceState) => {
     } catch (error) {
       summary.errors.push(`Partido ${match.matchNumber ?? match.id}: ${error.message}`);
     }
+
+    if ((index + 1) % 10 === 0 || index + 1 === matches.length) {
+      onProgress(`Migrando partidos (${index + 1}/${matches.length})...`);
+    }
   }
 
-  for (const prediction of predictions) {
+  const predictionRows = [];
+  onProgress(`Preparando predicciones (0/${predictions.length})...`);
+  for (const [index, prediction] of predictions.entries()) {
     try {
       const participantId = participantIdMap.get(prediction.participantId);
       const matchId = matchIdMap.get(prediction.matchId);
@@ -535,22 +611,40 @@ export const migrateInitialDataToSupabase = async (sourceState) => {
         predictedAwayTeam: prediction.predictedAwayTeam ?? localMatch?.awayTeam ?? ''
       });
       const key = `${participantId}|${matchId}`;
-      const result = await upsertByExisting({
-        table: 'predictions',
-        existing: predictionsByPair.get(key),
-        row,
-        fromRow: predictionFromRow
+      const existing = predictionsByPair.get(key);
+      predictionRows.push({
+        action: existing?.id ? 'updated' : 'created',
+        key,
+        row: existing?.id ? { id: existing.id, ...row } : row
       });
-
-      if (result.action === 'created') summary.predictionsCreated += 1;
-      if (result.action === 'updated') summary.predictionsUpdated += 1;
-      predictionsByPair.set(key, { id: result.row.id, participant_id: participantId, match_id: matchId });
     } catch (error) {
       summary.errors.push(`Predicción ${prediction.id ?? ''}: ${error.message}`);
     }
+
+    if ((index + 1) % 50 === 0 || index + 1 === predictions.length) {
+      onProgress(`Preparando predicciones (${index + 1}/${predictions.length})...`);
+    }
   }
 
-  for (const participant of participants) {
+  let savedPredictionCount = 0;
+  onProgress(`Migrando predicciones (0/${predictionRows.length})...`);
+  for (const chunk of chunkRows(predictionRows)) {
+    try {
+      const savedPredictions = await upsertRows('predictions', chunk.map((item) => item.row));
+      savedPredictionCount += chunk.length;
+      summary.predictionsCreated += chunk.filter((item) => item.action === 'created').length;
+      summary.predictionsUpdated += chunk.filter((item) => item.action === 'updated').length;
+      savedPredictions.forEach((row) => {
+        predictionsByPair.set(`${row.participant_id}|${row.match_id}`, row);
+      });
+      onProgress(`Migrando predicciones (${Math.min(savedPredictionCount, predictionRows.length)}/${predictionRows.length})...`);
+    } catch (error) {
+      summary.errors.push(`Predicciones por lote: ${error.message}`);
+    }
+  }
+
+  onProgress(`Migrando pagos (0/${participants.length})...`);
+  for (const [index, participant] of participants.entries()) {
     try {
       const participantId = participantIdMap.get(participant.id) ?? participantNameMap.get(normalizeName(participant.name));
       if (!participantId) {
@@ -574,9 +668,14 @@ export const migrateInitialDataToSupabase = async (sourceState) => {
     } catch (error) {
       summary.errors.push(`Pago ${participant.name ?? participant.id}: ${error.message}`);
     }
+
+    if ((index + 1) % 5 === 0 || index + 1 === participants.length) {
+      onProgress(`Migrando pagos (${index + 1}/${participants.length})...`);
+    }
   }
 
-  for (const participant of participants) {
+  onProgress(`Migrando resultados finales (0/${participants.length})...`);
+  for (const [index, participant] of participants.entries()) {
     try {
       const participantId = participantIdMap.get(participant.id) ?? participantNameMap.get(normalizeName(participant.name));
       if (!participantId) {
@@ -611,11 +710,17 @@ export const migrateInitialDataToSupabase = async (sourceState) => {
     } catch (error) {
       summary.errors.push(`Resultado final ${participant.name ?? participant.id}: ${error.message}`);
     }
+
+    if ((index + 1) % 5 === 0 || index + 1 === participants.length) {
+      onProgress(`Migrando resultados finales (${index + 1}/${participants.length})...`);
+    }
   }
 
+  onProgress('Guardando configuración...');
   await saveSettings({ ...settings, finalPredictions, finalResults });
 
   try {
+    onProgress('Calculando detalle de puntos...');
     const mappedParticipants = participants.map((participant) => ({
       ...participant,
       id: participantIdMap.get(participant.id) ?? participant.id
@@ -640,6 +745,7 @@ export const migrateInitialDataToSupabase = async (sourceState) => {
       }))
     );
 
+    onProgress(`Guardando detalle de puntos (${scoreDetails.length} registros)...`);
     const savedDetails = await saveScoreDetails(scoreDetails);
     summary.scoreDetailsCreated = savedDetails.length;
   } catch (error) {
