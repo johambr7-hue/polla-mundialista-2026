@@ -29,6 +29,15 @@ function ChartsPanel({ matches, participants, predictions, ranking }) {
   const match = matchesWithPredictions.find((item) => item.id === selectedMatchId) ?? matchesWithPredictions[0] ?? matches[0];
   const distribution = match ? getPredictionDistribution(match, predictions) : [];
   const maxDistribution = Math.max(...distribution.map((item) => item.count), 1);
+  const hasOfficialScore =
+    match?.realHomeScore !== '' &&
+    match?.realHomeScore !== null &&
+    match?.realHomeScore !== undefined &&
+    match?.realAwayScore !== '' &&
+    match?.realAwayScore !== null &&
+    match?.realAwayScore !== undefined;
+  const officialScore = hasOfficialScore ? `${match.realHomeScore}-${match.realAwayScore}` : '';
+  const officialScoreLabel = hasOfficialScore ? `${match.realHomeScore} - ${match.realAwayScore}` : 'Pendiente';
   const participantById = useMemo(
     () => Object.fromEntries(participants.map((participant) => [participant.id, participant])),
     [participants]
@@ -82,6 +91,9 @@ function ChartsPanel({ matches, participants, predictions, ranking }) {
           <div>
             <h3>Distribución de predicciones</h3>
             <p className="muted">{match ? displayMatch(match) : 'Sin partido seleccionado'}</p>
+            <p className="chart-real-score">
+              Resultado real: <strong>{officialScoreLabel}</strong>
+            </p>
           </div>
           <label className="chart-match-selector">
             Partido
@@ -106,11 +118,15 @@ function ChartsPanel({ matches, participants, predictions, ranking }) {
               const names = getParticipantsForScore(item.score);
               const width = maxDistribution ? Math.max((item.count / maxDistribution) * 100, item.count > 0 ? 6 : 0) : 0;
               const expanded = openScore === item.score;
+              const isOfficialScore = item.score === officialScore;
 
               return (
-                <div className="distribution-item" key={item.score}>
+                <div className={isOfficialScore ? 'distribution-item official-score-item' : 'distribution-item'} key={item.score}>
                   <div className="bar-row distribution-row">
-                    <span>{item.score.replace('-', ' - ')}</span>
+                    <span className="distribution-score">
+                      {item.score.replace('-', ' - ')}
+                      {isOfficialScore && <small>Resultado real</small>}
+                    </span>
                     <div className="bar-track">
                       <div className="bar-fill" style={{ width: `${width}%`, background: palette[(index + 4) % palette.length] }} />
                     </div>

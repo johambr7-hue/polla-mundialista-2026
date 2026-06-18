@@ -742,9 +742,44 @@ th {
   gap: 8px;
 }
 
+.official-score-item {
+  background: #ecfdf3;
+  border: 1px solid #9fe7ba;
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+
 .distribution-row {
   border-radius: 8px;
   padding: 2px 0;
+}
+
+.distribution-score {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.distribution-score small,
+.chart-real-score strong {
+  background: #dcfce7;
+  border: 1px solid #86efac;
+  border-radius: 999px;
+  color: #166534;
+  display: inline-flex;
+  font-size: 0.74rem;
+  font-weight: 900;
+  line-height: 1;
+  padding: 5px 8px;
+  width: fit-content;
+}
+
+.chart-real-score {
+  color: #66728a;
+  font-size: 0.9rem;
+  font-weight: 800;
+  margin-top: 6px;
 }
 
 .count-button {
