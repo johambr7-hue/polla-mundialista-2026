@@ -72,7 +72,7 @@ function AdminPanel({
   const [resultDrafts, setResultDrafts] = useState(() => createResultDrafts(matches));
   const [predictionImportSummary, setPredictionImportSummary] = useState(null);
   const [masterImport, setMasterImport] = useState({ fileName: '', csvText: '', validation: null });
-  const [initialMigration, setInitialMigration] = useState({ loading: false, summary: null, error: '' });
+  const [initialMigration, setInitialMigration] = useState({ loading: false, summary: null, error: '', status: '' });
   const [activeAdminTab, setActiveAdminTab] = useState('results');
   const [resultStatusFilter, setResultStatusFilter] = useState('pendiente');
   const [resultStageFilter, setResultStageFilter] = useState('all');
@@ -388,21 +388,33 @@ function AdminPanel({
   };
 
   const runInitialMigration = async () => {
-    if (!migrateInitialData) return;
+    console.log('Ejecutando migración inicial a Supabase');
+    if (!migrateInitialData) {
+      setInitialMigration({
+        loading: false,
+        summary: null,
+        error: 'La función de migración inicial no está conectada.',
+        status: ''
+      });
+      return;
+    }
 
-    setInitialMigration({ loading: true, summary: null, error: '' });
+    setInitialMigration({ loading: true, summary: null, error: '', status: 'Preparando migración inicial...' });
     try {
       const summary = await migrateInitialData();
       setInitialMigration({
         loading: false,
         summary,
-        error: summary ? '' : 'Migración cancelada por el usuario.'
+        error: summary ? '' : 'Migración cancelada por el usuario.',
+        status: summary ? 'Migración finalizada.' : ''
       });
     } catch (error) {
+      console.error('Error migrando datos iniciales a Supabase', error);
       setInitialMigration({
         loading: false,
         summary: null,
-        error: error.message ?? 'No se pudo migrar la información inicial.'
+        error: error.message ?? 'No se pudo migrar la información inicial.',
+        status: ''
       });
     }
   };
@@ -479,6 +491,7 @@ function AdminPanel({
             Restaurar datos oficiales
           </button>
         </div>
+        {initialMigration.status && <div className="notice">{initialMigration.status}</div>}
         {initialMigration.error && <div className="notice error-notice">{initialMigration.error}</div>}
         {initialMigration.summary && (
           <div className="notice success-notice">
@@ -540,6 +553,7 @@ function AdminPanel({
             {initialMigration.loading ? 'Migrando...' : 'Migrar datos iniciales a Supabase'}
           </button>
         </div>
+        {initialMigration.status && <div className="notice">{initialMigration.status}</div>}
         {initialMigration.error && <div className="notice error-notice">{initialMigration.error}</div>}
         {initialMigration.summary && (
           <div className="stack-list tight">
