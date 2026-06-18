@@ -228,7 +228,18 @@ export const saveParticipant = async (participant) => {
   return participantFromRow(row);
 };
 export const saveParticipants = async (participants) =>
-  (await replaceRows('participants', participants, participantToRow)).map(participantFromRow);
+  (await upsertRows('participants', participants.map(participantToRow))).map(participantFromRow);
+
+export const deleteParticipant = async (participantId) => {
+  if (!isUuid(participantId)) {
+    throw new Error('No se puede eliminar el participante porque no tiene un UUID válido de Supabase.');
+  }
+
+  const client = requireSupabase();
+  const { error } = await client.from('participants').delete().eq('id', participantId);
+  if (error) throw error;
+  return participantId;
+};
 
 export const getMatches = async () => (await selectAll('matches', 'match_number')).map(matchFromRow);
 export const saveMatch = async (match) => {

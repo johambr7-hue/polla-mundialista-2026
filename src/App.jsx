@@ -24,6 +24,7 @@ import SearchPanel from './components/SearchPanel';
 import TournamentPredictionPanel from './components/TournamentPredictionPanel';
 import { defaultSettings } from './data/sampleData';
 import {
+  deleteParticipant as deleteParticipantFromSupabase,
   isSupabaseConfigured,
   loadSupabaseState,
   saveScoreDetails,
@@ -245,6 +246,26 @@ function App() {
     }
   };
 
+  const deleteParticipant = async (participantId) => {
+    try {
+      setSaveError('');
+      await deleteParticipantFromSupabase(participantId);
+      setState((current) => ({
+        ...current,
+        participants: current.participants.filter((participant) => participant.id !== participantId),
+        predictions: current.predictions.filter((prediction) => prediction.participantId !== participantId),
+        payments: current.payments.filter((payment) => payment.participantId !== participantId),
+        tournamentEntries: Object.fromEntries(
+          Object.entries(current.tournamentEntries ?? {}).filter(([entryParticipantId]) => entryParticipantId !== participantId)
+        )
+      }));
+      if (currentParticipantId === participantId) setCurrentParticipantId('');
+      await reloadFromSupabase();
+    } catch (error) {
+      setSaveError(error.message ?? 'No se pudo eliminar el participante en Supabase.');
+    }
+  };
+
   const exportAll = () => {
     downloadCsv('polla-mundialista-ranking.csv', [
       [
@@ -421,6 +442,7 @@ function App() {
             isAdmin={isAdmin}
             participants={state.participants}
             predictions={state.predictions}
+            deleteParticipant={deleteParticipant}
             updateParticipants={(participants) => updateState({ participants })}
             updatePredictions={(predictions) => updateState({ predictions })}
           />

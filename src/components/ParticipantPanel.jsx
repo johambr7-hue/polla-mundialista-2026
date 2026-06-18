@@ -3,7 +3,7 @@ import { Edit2, Plus, Save, Trash2, X } from 'lucide-react';
 
 const emptyForm = { name: '', email: '', phone: '', paid: false, paymentMethod: '' };
 
-function ParticipantPanel({ isAdmin, participants, predictions, updateParticipants, updatePredictions }) {
+function ParticipantPanel({ deleteParticipant, isAdmin, participants, updateParticipants }) {
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
 
@@ -45,8 +45,8 @@ function ParticipantPanel({ isAdmin, participants, predictions, updateParticipan
   };
 
   const removeParticipant = (participantId) => {
-    updateParticipants(participants.filter((participant) => participant.id !== participantId));
-    updatePredictions(predictions.filter((prediction) => prediction.participantId !== participantId));
+    if (!window.confirm('¿Seguro que deseas eliminar este participante?')) return;
+    deleteParticipant(participantId);
   };
 
   return (
@@ -147,7 +147,7 @@ function ParticipantPanel({ isAdmin, participants, predictions, updateParticipan
               <div className="row-actions">
                 <button
                   className={participant.paid ? 'secondary-button compact' : 'primary-button compact'}
-                  disabled={!isAdmin}
+                  disabled={!isAdmin || !participant.id}
                   onClick={() =>
                     updatePayment(participant.id, {
                       paid: !participant.paid,
@@ -160,7 +160,7 @@ function ParticipantPanel({ isAdmin, participants, predictions, updateParticipan
                 </button>
                 <button
                   className="icon-button"
-                  disabled={!isAdmin}
+                  disabled={!isAdmin || !participant.id}
                   onClick={() => editParticipant(participant)}
                   type="button"
                   title="Editar participante"
@@ -169,7 +169,7 @@ function ParticipantPanel({ isAdmin, participants, predictions, updateParticipan
                 </button>
                 <button
                   className="icon-button danger"
-                  disabled={!isAdmin}
+                  disabled={!isAdmin || !participant.id}
                   onClick={() => removeParticipant(participant.id)}
                   type="button"
                   title="Eliminar participante"
