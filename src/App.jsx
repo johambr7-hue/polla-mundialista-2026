@@ -40,7 +40,7 @@ const tabs = [
   { id: 'polla', label: 'Polla completa', icon: Trophy },
   { id: 'predicciones', label: 'Predicciones', icon: CalendarDays },
   { id: 'participantes', label: 'Participantes', icon: Users },
-  { id: 'partidos', label: 'Partidos', icon: CalendarDays },
+  { id: 'partidos', label: 'Resultados reales', icon: CalendarDays },
   { id: 'buscar', label: 'Buscar', icon: Search },
   { id: 'graficas', label: 'Gráficas', icon: BarChart3 },
   { id: 'reglas', label: 'Reglas', icon: FileText },
