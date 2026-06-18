@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { Edit2, Plus, Save, Trash2, X } from 'lucide-react';
-import { createId } from '../services/supabaseService';
 import { displayTeam } from '../utils/localization';
 
 const emptyMatch = {
@@ -90,7 +89,7 @@ function MatchPanel({ isAdmin, matches, predictions, updateMatches, updatePredic
     if (editingId) {
       updateMatches(matches.map((match) => (match.id === editingId ? { ...match, ...normalized } : match)));
     } else {
-      updateMatches([...matches, { id: createId('match'), ...normalized }]);
+      updateMatches([...matches, normalized]);
     }
 
     setForm(emptyMatch);
@@ -176,7 +175,7 @@ function MatchPanel({ isAdmin, matches, predictions, updateMatches, updatePredic
   };
 
   const renderMatchCard = (match) => (
-    <article className="match-card" key={match.id}>
+    <article className="match-card" key={match.id ?? `${match.matchNumber}-${match.date}-${match.homeTeam}-${match.awayTeam}`}>
       <div className="match-meta">
         <span>{match.matchNumber ? `#${match.matchNumber} · ` : ''}{match.date} · {match.time}</span>
         <span>{match.group || match.stage}</span>

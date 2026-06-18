@@ -11,11 +11,12 @@ const requireSupabase = () => {
   return supabase;
 };
 
-export const createId = (prefix) => `${prefix}-${crypto.randomUUID()}`;
-
 const asEmptyString = (value) => value ?? '';
 const nullableNumber = (value) => (value === '' || value === undefined || value === null ? null : Number(value));
 const fromNullableNumber = (value) => (value === null || value === undefined ? '' : Number(value));
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const isUuid = (value) => uuidPattern.test(String(value ?? ''));
+const withUuid = (row, id) => (isUuid(id) ? { id, ...row } : row);
 
 const participantFromRow = (row) => ({
   id: row.id,
@@ -26,8 +27,7 @@ const participantFromRow = (row) => ({
   paymentMethod: row.payment_method ?? ''
 });
 
-const participantToRow = (participant) => ({
-  id: participant.id ?? createId('participant'),
+const participantToRow = (participant) => withUuid({
   name: participant.name,
   normalized_name: String(participant.name ?? '')
     .trim()
@@ -38,7 +38,7 @@ const participantToRow = (participant) => ({
   phone: asEmptyString(participant.phone),
   paid: Boolean(participant.paid),
   payment_method: asEmptyString(participant.paymentMethod)
-});
+}, participant.id);
 
 const matchFromRow = (row) => ({
   id: row.id,
@@ -58,8 +58,7 @@ const matchFromRow = (row) => ({
   status: row.status ?? 'pendiente'
 });
 
-const matchToRow = (match) => ({
-  id: match.id ?? createId('match'),
+const matchToRow = (match) => withUuid({
   match_code: match.matchCode ?? match.match_code ?? `match-${match.matchNumber ?? match.id ?? crypto.randomUUID()}`,
   phase: asEmptyString(match.stage),
   group_name: asEmptyString(match.group),
@@ -72,7 +71,7 @@ const matchToRow = (match) => ({
   real_away_goals: nullableNumber(match.realAwayScore),
   real_qualified_team: asEmptyString(match.qualifiedTeam),
   status: match.status ?? 'pendiente'
-});
+}, match.id);
 
 const predictionFromRow = (row) => ({
   id: row.id,
@@ -95,8 +94,7 @@ const predictionFromRow = (row) => ({
   createdAt: row.created_at ?? ''
 });
 
-const predictionToRow = (prediction) => ({
-  id: prediction.id ?? createId('prediction'),
+const predictionToRow = (prediction) => withUuid({
   participant_id: prediction.participantId,
   match_id: prediction.matchId,
   phase: asEmptyString(prediction.phase),
@@ -114,7 +112,7 @@ const predictionToRow = (prediction) => ({
   points_knockout_score: Number(prediction.pointsKnockoutScore ?? 0),
   points_total: Number(prediction.pointsTotal ?? 0),
   created_at: prediction.createdAt ?? new Date().toISOString()
-});
+}, prediction.id);
 
 const paymentFromRow = (row) => ({
   id: row.id,
@@ -126,7 +124,6 @@ const paymentFromRow = (row) => ({
 });
 
 const paymentToRow = (payment) => ({
-  id: payment.id ?? payment.participantId ?? createId('payment'),
   participant_id: payment.participantId,
   amount: nullableNumber(payment.amount),
   method: asEmptyString(payment.paymentMethod),
@@ -153,8 +150,7 @@ const tournamentPredictionFromRow = (row) => ({
   pointsTotal: Number(row.points_total ?? 0)
 });
 
-const tournamentPredictionToRow = (entry) => ({
-  id: entry.id ?? entry.participantId ?? createId('tournament-prediction'),
+const tournamentPredictionToRow = (entry) => withUuid({
   participant_id: entry.participantId,
   champion: asEmptyString(entry.finalResults?.champion ?? entry.champion),
   runner_up: asEmptyString(entry.finalResults?.second ?? entry.second ?? entry.runnerUp),
@@ -165,7 +161,7 @@ const tournamentPredictionToRow = (entry) => ({
   points_third_place: Number(entry.pointsThirdPlace ?? 0),
   points_fourth_place: Number(entry.pointsFourthPlace ?? 0),
   points_total: Number(entry.pointsTotal ?? 0)
-});
+}, entry.id);
 
 const settingFromRow = (row) => row.value ?? {};
 
@@ -186,15 +182,14 @@ const normalizeSettings = (rows) => {
   };
 };
 
-const scoreDetailToRow = (detail) => ({
-  id: detail.id ?? `${detail.participantId ?? detail.participante_id}-${detail.matchId ?? 'general'}-${detail.phase ?? detail.fase}-${detail.type ?? detail.tipo ?? 'detalle'}`,
+const scoreDetailToRow = (detail) => withUuid({
   participant_id: detail.participantId ?? detail.participante_id,
   match_id: detail.matchId ?? detail.match_id ?? null,
   phase: detail.phase ?? detail.fase,
   type: detail.type ?? detail.tipo ?? 'detalle',
   points: Number(detail.points ?? detail.puntos ?? detail.totalPoints ?? detail.puntos_total_fase ?? 0),
   detail: detail.detailData ?? detail.detail ?? detail
-});
+}, detail.id);
 
 const selectAll = async (table, order = 'id') => {
   const client = requireSupabase();
@@ -224,26 +219,32 @@ const replaceRows = async (table, rows, toRow, deleteColumn = 'id') => {
   return data ?? [];
 };
 
+const hasPredictionUuids = (prediction) => isUuid(prediction.participantId) && isUuid(prediction.matchId);
+const hasParticipantUuid = (item) => isUuid(item.participantId);
+
 export const getParticipants = async () => (await selectAll('participants', 'name')).map(participantFromRow);
 export const saveParticipant = async (participant) => {
   const [row] = await upsertRows('participants', participantToRow(participant));
   return participantFromRow(row);
 };
-export const saveParticipants = async (participants) => replaceRows('participants', participants, participantToRow);
+export const saveParticipants = async (participants) =>
+  (await replaceRows('participants', participants, participantToRow)).map(participantFromRow);
 
 export const getMatches = async () => (await selectAll('matches', 'match_number')).map(matchFromRow);
 export const saveMatch = async (match) => {
   const [row] = await upsertRows('matches', matchToRow(match));
   return matchFromRow(row);
 };
-export const saveMatches = async (matches) => replaceRows('matches', matches, matchToRow);
+export const saveMatches = async (matches) =>
+  (await replaceRows('matches', matches, matchToRow)).map(matchFromRow);
 
 export const getPredictions = async () => (await selectAll('predictions', 'id')).map(predictionFromRow);
 export const savePrediction = async (prediction) => {
   const [row] = await upsertRows('predictions', predictionToRow(prediction));
   return predictionFromRow(row);
 };
-export const savePredictions = async (predictions) => replaceRows('predictions', predictions, predictionToRow);
+export const savePredictions = async (predictions) =>
+  (await replaceRows('predictions', predictions.filter(hasPredictionUuids), predictionToRow)).map(predictionFromRow);
 
 export const getTournamentPredictions = async () => {
   const rows = await selectAll('tournament_predictions', 'participant_id');
@@ -254,19 +255,22 @@ export const saveTournamentPrediction = async (entry) => {
   return tournamentPredictionFromRow(row);
 };
 export const saveTournamentPredictions = async (entriesByParticipant) =>
-  replaceRows(
+  (await replaceRows(
     'tournament_predictions',
-    Object.entries(entriesByParticipant ?? {}).map(([participantId, entry]) => ({ participantId, ...entry })),
+    Object.entries(entriesByParticipant ?? {})
+      .map(([participantId, entry]) => ({ participantId, ...entry }))
+      .filter(hasParticipantUuid),
     tournamentPredictionToRow,
     'participant_id'
-  );
+  )).map(tournamentPredictionFromRow);
 
 export const getPayments = async () => (await selectAll('payments', 'participant_id')).map(paymentFromRow);
 export const savePayment = async (payment) => {
   const [row] = await upsertRows('payments', paymentToRow(payment));
   return paymentFromRow(row);
 };
-export const savePayments = async (payments) => replaceRows('payments', payments, paymentToRow, 'participant_id');
+export const savePayments = async (payments) =>
+  (await replaceRows('payments', payments.filter(hasParticipantUuid), paymentToRow, 'participant_id')).map(paymentFromRow);
 
 export const getSettings = async () => normalizeSettings(await selectAll('settings', 'key'));
 export const saveSettings = async (settings) => {
@@ -275,7 +279,13 @@ export const saveSettings = async (settings) => {
 };
 
 export const getScoreDetails = async () => selectAll('score_details', 'participant_id');
-export const saveScoreDetails = async (scoreDetails) => upsertRows('score_details', scoreDetails.map(scoreDetailToRow));
+export const saveScoreDetails = async (scoreDetails) =>
+  replaceRows(
+    'score_details',
+    scoreDetails.filter((detail) => isUuid(detail.participantId ?? detail.participante_id)),
+    scoreDetailToRow,
+    'participant_id'
+  );
 
 export const loadSupabaseState = async () => {
   const [

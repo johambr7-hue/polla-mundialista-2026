@@ -164,7 +164,23 @@ function App() {
   const persistSection = async (section, value) => {
     try {
       setSaveError('');
-      await saveStateSection(section, value);
+      const savedValue = await saveStateSection(section, value);
+
+      if (section === 'participants' && Array.isArray(savedValue)) {
+        setState((current) => ({ ...current, participants: savedValue }));
+        setCurrentParticipantId((currentId) =>
+          savedValue.some((participant) => participant.id === currentId) ? currentId : savedValue[0]?.id ?? ''
+        );
+        await saveStateSection('payments', paymentsFromParticipants(savedValue, state.settings.entryFee));
+      }
+
+      if (section === 'matches' && Array.isArray(savedValue)) {
+        setState((current) => ({ ...current, matches: savedValue }));
+      }
+
+      if (section === 'predictions' && Array.isArray(savedValue)) {
+        setState((current) => ({ ...current, predictions: savedValue }));
+      }
     } catch (error) {
       setSaveError(error.message ?? `No se pudo guardar ${section} en Supabase.`);
     }
@@ -175,7 +191,6 @@ function App() {
     persistKeys.forEach((key) => {
       if (key === 'participants') {
         persistSection('participants', partial.participants);
-        persistSection('payments', paymentsFromParticipants(partial.participants, state.settings.entryFee));
         return;
       }
 

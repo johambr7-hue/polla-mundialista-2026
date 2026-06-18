@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Edit2, Plus, Save, Trash2, X } from 'lucide-react';
-import { createId } from '../services/supabaseService';
 
 const emptyForm = { name: '', email: '', phone: '', paid: false, paymentMethod: '' };
 
@@ -19,7 +18,7 @@ function ParticipantPanel({ isAdmin, participants, predictions, updateParticipan
         )
       );
     } else {
-      updateParticipants([...participants, { id: createId('participant'), ...form, name: form.name.trim() }]);
+      updateParticipants([...participants, { ...form, name: form.name.trim() }]);
     }
 
     setForm(emptyForm);
@@ -136,7 +135,7 @@ function ParticipantPanel({ isAdmin, participants, predictions, updateParticipan
         </div>
         <div className="stack-list">
           {participants.map((participant) => (
-            <article className="list-item" key={participant.id}>
+            <article className="list-item" key={participant.id ?? participant.name}>
               <div>
                 <strong>{participant.name}</strong>
                 <span>{participant.email || 'Sin correo'}</span>

@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { Lock, Save } from 'lucide-react';
-import { createId } from '../services/supabaseService';
 import {
   calculatePredictionBreakdown,
   calculatePredictionPoints,
@@ -73,7 +72,10 @@ function PredictionPanel({
     if (existing) {
       updatePredictions(
         predictions.map((prediction) => {
-          if (prediction.id !== existing.id) return prediction;
+          const samePrediction = prediction.id && existing.id
+            ? prediction.id === existing.id
+            : prediction.matchId === match.id && prediction.participantId === participantId;
+          if (!samePrediction) return prediction;
 
           const nextPrediction = { ...prediction, [field]: normalizeValue(field, value) };
           if (!isGroupStage(match.stage) && !isPredictionDraw(nextPrediction)) {
@@ -88,7 +90,6 @@ function PredictionPanel({
     updatePredictions([
       ...predictions,
       {
-        id: createId('prediction'),
         participantId,
         matchId: match.id,
         homeScore: field === 'homeScore' ? normalizeValue(field, value) : '',
