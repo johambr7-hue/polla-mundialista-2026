@@ -1,0 +1,18 @@
+{
+  "participantCount": 21,
+  "matchCount": 104,
+  "predictionsCount": 2184,
+  "finalPredictionCount": 189,
+  "matchesPerParticipant": 104,
+  "errors": [],
+  "warnings": [],
+  "duplicatedParticipants": [],
+  "duplicatedMatches": [],
+  "duplicatePredictions": [],
+  "incompleteParticipants": [],
+  "invalidScores": [],
+  "emptyScores": [],
+  "knockoutWithoutQualified": [],
+  "knockoutDrawsWithoutWinner": [],
+  "existingData": 104
+}

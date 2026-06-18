@@ -1,0 +1,105 @@
+﻿match_number,date,time,stage,group,home_team,away_team,stadium,city,status,home_score,away_score,winner,decided_by,source_note
+1,2026-06-11,19:00,Group Stage,A,Mexico,South Africa,Estadio Azteca,Ciudad de México,played,2,0,Mexico,90min,FIFA/ESPN/schedule snapshot
+2,2026-06-12,02:00,Group Stage,A,South Korea,Czechia,TBD,TBD,played,2,1,South Korea,90min,FIFA/ESPN/schedule snapshot
+3,2026-06-12,19:00,Group Stage,B,Canada,Bosnia and Herzegovina,TBD,TBD,played,1,1,Draw,90min,FIFA/ESPN/schedule snapshot
+4,2026-06-13,01:00,Group Stage,D,United States,Paraguay,Los Angeles Stadium,Los Angeles,played,4,1,United States,90min,FIFA/ESPN/schedule snapshot
+5,2026-06-13,19:00,Group Stage,B,Qatar,Switzerland,TBD,TBD,played,1,1,Draw,90min,FIFA/ESPN/schedule snapshot
+6,2026-06-13,22:00,Group Stage,C,Brazil,Morocco,TBD,TBD,played,1,1,Draw,90min,FIFA/ESPN/schedule snapshot
+7,2026-06-14,01:00,Group Stage,C,Haiti,Scotland,TBD,TBD,played,0,1,Scotland,90min,FIFA/ESPN/schedule snapshot
+8,2026-06-14,04:00,Group Stage,D,Australia,Turkey,TBD,TBD,played,2,0,Australia,90min,FIFA/ESPN/schedule snapshot
+9,2026-06-14,17:00,Group Stage,E,Germany,Curacao,TBD,TBD,played,7,1,Germany,90min,FIFA/ESPN/schedule snapshot
+10,2026-06-14,20:00,Group Stage,F,Netherlands,Japan,TBD,TBD,played,2,2,Draw,90min,FIFA/ESPN/schedule snapshot
+11,2026-06-14,23:00,Group Stage,E,Ivory Coast,Ecuador,TBD,TBD,played,1,0,Ivory Coast,90min,FIFA/ESPN/schedule snapshot
+12,2026-06-15,02:00,Group Stage,F,Sweden,Tunisia,TBD,TBD,played,5,1,Sweden,90min,FIFA/ESPN/schedule snapshot
+13,2026-06-15,16:00,Group Stage,H,Spain,Cape Verde,TBD,TBD,played,0,0,Draw,90min,FIFA/ESPN/schedule snapshot
+14,2026-06-15,19:00,Group Stage,G,Belgium,Egypt,TBD,TBD,played,1,1,Draw,90min,FIFA/ESPN/schedule snapshot
+15,2026-06-15,22:00,Group Stage,H,Saudi Arabia,Uruguay,TBD,TBD,played,1,1,Draw,90min,FIFA/ESPN/schedule snapshot
+16,2026-06-16,01:00,Group Stage,G,Iran,New Zealand,TBD,TBD,played,2,2,Draw,90min,FIFA/ESPN/schedule snapshot
+17,2026-06-16,19:00,Group Stage,I,France,Senegal,TBD,TBD,played,3,1,France,90min,FIFA/ESPN/schedule snapshot
+18,2026-06-16,22:00,Group Stage,I,Iraq,Norway,TBD,TBD,played,1,4,Norway,90min,FIFA/ESPN/schedule snapshot
+19,2026-06-17,01:00,Group Stage,J,Argentina,Algeria,TBD,TBD,played,3,0,Argentina,90min,FIFA/ESPN/schedule snapshot
+20,2026-06-17,04:00,Group Stage,J,Austria,Jordan,TBD,TBD,played,3,1,Austria,90min,FIFA/ESPN/schedule snapshot
+21,2026-06-17,17:00,Group Stage,K,Portugal,DR Congo,TBD,TBD,pending,,,,,FIFA/ESPN/schedule snapshot
+22,2026-06-17,20:00,Group Stage,L,England,Croatia,Dallas Stadium,Arlington,pending,,,,,FIFA/ESPN/schedule snapshot
+23,2026-06-17,23:00,Group Stage,L,Ghana,Panama,TBD,TBD,pending,,,,,FIFA/ESPN/schedule snapshot
+24,2026-06-18,02:00,Group Stage,K,Uzbekistan,Colombia,Estadio Azteca,Ciudad de México,pending,,,,,FIFA/ESPN/schedule snapshot
+25,2026-06-18,16:00,Group Stage,A,Czechia,South Africa,TBD,TBD,pending,,,,,FIFA/ESPN/schedule snapshot
+26,2026-06-18,19:00,Group Stage,B,Switzerland,Bosnia and Herzegovina,TBD,TBD,pending,,,,,FIFA/ESPN/schedule snapshot
+27,2026-06-18,22:00,Group Stage,B,Canada,Qatar,TBD,TBD,pending,,,,,FIFA/ESPN/schedule snapshot
+28,2026-06-19,01:00,Group Stage,A,Mexico,South Korea,TBD,TBD,pending,,,,,FIFA/ESPN/schedule snapshot
+29,2026-06-19,19:00,Group Stage,D,United States,Australia,Seattle Stadium,Seattle,pending,,,,,FIFA/ESPN/schedule snapshot
+30,2026-06-19,22:00,Group Stage,C,Scotland,Morocco,Boston Stadium,Boston,pending,,,,,FIFA/ESPN/schedule snapshot
+31,2026-06-20,00:30,Group Stage,C,Brazil,Haiti,Philadelphia Stadium,Philadelphia,pending,,,,,FIFA/ESPN/schedule snapshot
+32,2026-06-20,03:00,Group Stage,D,Turkey,Paraguay,San Francisco Bay Area Stadium,San Francisco Bay Area,pending,,,,,FIFA/ESPN/schedule snapshot
+33,2026-06-20,17:00,Group Stage,F,Netherlands,Sweden,Houston Stadium,Houston,pending,,,,,FIFA/ESPN/schedule snapshot
+34,2026-06-20,20:00,Group Stage,E,Germany,Ivory Coast,Toronto Stadium,Toronto,pending,,,,,FIFA/ESPN/schedule snapshot
+35,2026-06-21,00:00,Group Stage,E,Ecuador,Curacao,Kansas City Stadium,Kansas City,pending,,,,,FIFA/ESPN/schedule snapshot
+36,2026-06-21,04:00,Group Stage,F,Tunisia,Japan,Estadio Monterrey,Monterrey,pending,,,,,FIFA/ESPN/schedule snapshot
+37,2026-06-21,16:00,Group Stage,H,Spain,Saudi Arabia,Atlanta Stadium,Atlanta,pending,,,,,FIFA/ESPN/schedule snapshot
+38,2026-06-21,19:00,Group Stage,G,Belgium,Iran,Los Angeles Stadium,Los Angeles,pending,,,,,FIFA/ESPN/schedule snapshot
+39,2026-06-21,22:00,Group Stage,H,Uruguay,Cape Verde,Miami Stadium,Miami,pending,,,,,FIFA/ESPN/schedule snapshot
+40,2026-06-22,01:00,Group Stage,G,New Zealand,Egypt,BC Place,Vancouver,pending,,,,,FIFA/ESPN/schedule snapshot
+41,2026-06-22,17:00,Group Stage,J,Argentina,Austria,Dallas Stadium,Dallas,pending,,,,,FIFA/ESPN/schedule snapshot
+42,2026-06-22,21:00,Group Stage,I,France,Iraq,Philadelphia Stadium,Philadelphia,pending,,,,,FIFA/ESPN/schedule snapshot
+43,2026-06-23,00:00,Group Stage,I,Norway,Senegal,New York New Jersey Stadium,New York New Jersey,pending,,,,,FIFA/ESPN/schedule snapshot
+44,2026-06-23,03:00,Group Stage,J,Jordan,Algeria,San Francisco Bay Area Stadium,San Francisco Bay Area,pending,,,,,FIFA/ESPN/schedule snapshot
+45,2026-06-23,17:00,Group Stage,K,Portugal,Uzbekistan,Houston Stadium,Houston,pending,,,,,FIFA/ESPN/schedule snapshot
+46,2026-06-23,20:00,Group Stage,L,England,Ghana,Boston Stadium,Boston,pending,,,,,FIFA/ESPN/schedule snapshot
+47,2026-06-23,23:00,Group Stage,L,Panama,Croatia,Toronto Stadium,Toronto,pending,,,,,FIFA/ESPN/schedule snapshot
+48,2026-06-24,02:00,Group Stage,K,Colombia,DR Congo,Estadio Guadalajara,Guadalajara,pending,,,,,FIFA/ESPN/schedule snapshot
+49,2026-06-24,19:00,Group Stage,B,Switzerland,Canada,BC Place,Vancouver,pending,,,,,FIFA/ESPN/schedule snapshot
+50,2026-06-24,19:00,Group Stage,B,Bosnia and Herzegovina,Qatar,Seattle Stadium,Seattle,pending,,,,,FIFA/ESPN/schedule snapshot
+51,2026-06-24,22:00,Group Stage,C,Scotland,Brazil,Miami Stadium,Miami,pending,,,,,FIFA/ESPN/schedule snapshot
+52,2026-06-24,22:00,Group Stage,C,Morocco,Haiti,Atlanta Stadium,Atlanta,pending,,,,,FIFA/ESPN/schedule snapshot
+53,2026-06-25,01:00,Group Stage,A,Czechia,Mexico,Mexico City Stadium,Ciudad de México,pending,,,,,FIFA/ESPN/schedule snapshot
+54,2026-06-25,01:00,Group Stage,A,South Africa,South Korea,Estadio Monterrey,Monterrey,pending,,,,,FIFA/ESPN/schedule snapshot
+55,2026-06-25,20:00,Group Stage,E,Ecuador,Germany,New York New Jersey Stadium,New York New Jersey,pending,,,,,FIFA/ESPN/schedule snapshot
+56,2026-06-25,20:00,Group Stage,E,Curacao,Ivory Coast,Philadelphia Stadium,Philadelphia,pending,,,,,FIFA/ESPN/schedule snapshot
+57,2026-06-25,23:00,Group Stage,F,Tunisia,Netherlands,Kansas City Stadium,Kansas City,pending,,,,,FIFA/ESPN/schedule snapshot
+58,2026-06-25,23:00,Group Stage,F,Japan,Sweden,Dallas Stadium,Dallas,pending,,,,,FIFA/ESPN/schedule snapshot
+59,2026-06-26,02:00,Group Stage,D,Turkey,United States,Los Angeles Stadium,Los Angeles,pending,,,,,FIFA/ESPN/schedule snapshot
+60,2026-06-26,02:00,Group Stage,D,Paraguay,Australia,San Francisco Bay Area Stadium,San Francisco Bay Area,pending,,,,,FIFA/ESPN/schedule snapshot
+61,2026-06-26,19:00,Group Stage,I,Norway,France,Boston Stadium,Boston,pending,,,,,FIFA/ESPN/schedule snapshot
+62,2026-06-26,19:00,Group Stage,I,Senegal,Iraq,TBD,TBD,pending,,,,,FIFA/ESPN/schedule snapshot
+63,2026-06-27,00:00,Group Stage,H,Uruguay,Spain,TBD,TBD,pending,,,,,FIFA/ESPN/schedule snapshot
+64,2026-06-27,00:00,Group Stage,H,Cape Verde,Saudi Arabia,TBD,TBD,pending,,,,,FIFA/ESPN/schedule snapshot
+65,2026-06-27,03:00,Group Stage,G,New Zealand,Belgium,TBD,TBD,pending,,,,,FIFA/ESPN/schedule snapshot
+66,2026-06-27,03:00,Group Stage,G,Egypt,Iran,TBD,TBD,pending,,,,,FIFA/ESPN/schedule snapshot
+67,2026-06-27,21:00,Group Stage,L,Panama,England,TBD,TBD,pending,,,,,FIFA/ESPN/schedule snapshot
+68,2026-06-27,21:00,Group Stage,L,Croatia,Ghana,TBD,TBD,pending,,,,,FIFA/ESPN/schedule snapshot
+69,2026-06-27,23:30,Group Stage,K,Colombia,Portugal,TBD,TBD,pending,,,,,FIFA/ESPN/schedule snapshot
+70,2026-06-27,23:30,Group Stage,K,DR Congo,Uzbekistan,TBD,TBD,pending,,,,,FIFA/ESPN/schedule snapshot
+71,2026-06-28,02:00,Group Stage,J,Jordan,Argentina,TBD,TBD,pending,,,,,FIFA/ESPN/schedule snapshot
+72,2026-06-28,02:00,Group Stage,J,Algeria,Austria,TBD,TBD,pending,,,,,FIFA/ESPN/schedule snapshot
+73,2026-06-28,TBD,Round of 32,,Runner-up Group A,Runner-up Group B,TBD,TBD,pending,,,,,Knockout official placeholder
+74,2026-06-29,TBD,Round of 32,,Winner Group E,Best 3rd Group A/B/C/D/F,TBD,TBD,pending,,,,,Knockout official placeholder
+75,2026-06-29,TBD,Round of 32,,Winner Group F,Runner-up Group C,TBD,TBD,pending,,,,,Knockout official placeholder
+76,2026-06-29,TBD,Round of 32,,Winner Group C,Runner-up Group F,TBD,TBD,pending,,,,,Knockout official placeholder
+77,2026-06-30,TBD,Round of 32,,Winner Group I,Best 3rd Group C/D/F/G/H,TBD,TBD,pending,,,,,Knockout official placeholder
+78,2026-06-30,TBD,Round of 32,,Runner-up Group E,Runner-up Group I,TBD,TBD,pending,,,,,Knockout official placeholder
+79,2026-06-30,TBD,Round of 32,,Winner Group A,Best 3rd Group C/E/F/H/I,TBD,TBD,pending,,,,,Knockout official placeholder
+80,2026-07-01,TBD,Round of 32,,Winner Group L,Best 3rd Group E/H/I/J/K,TBD,TBD,pending,,,,,Knockout official placeholder
+81,2026-07-01,TBD,Round of 32,,Winner Group D,Best 3rd Group B/E/F/I/J,TBD,TBD,pending,,,,,Knockout official placeholder
+82,2026-07-01,TBD,Round of 32,,Winner Group G,Best 3rd Group A/E/H/I/J,TBD,TBD,pending,,,,,Knockout official placeholder
+83,2026-07-02,TBD,Round of 32,,Runner-up Group K,Runner-up Group L,TBD,TBD,pending,,,,,Knockout official placeholder
+84,2026-07-02,TBD,Round of 32,,Winner Group H,Runner-up Group J,TBD,TBD,pending,,,,,Knockout official placeholder
+85,2026-07-02,TBD,Round of 32,,Winner Group B,Best 3rd Group E/F/G/I/J,TBD,TBD,pending,,,,,Knockout official placeholder
+86,2026-07-03,TBD,Round of 32,,Runner-up Group D,Runner-up Group G,TBD,TBD,pending,,,,,Knockout official placeholder
+87,2026-07-03,TBD,Round of 32,,Winner Group J,Runner-up Group H,TBD,TBD,pending,,,,,Knockout official placeholder
+88,2026-07-03,TBD,Round of 32,,Winner Group K,Best 3rd Group D/E/I/J/L,TBD,TBD,pending,,,,,Knockout official placeholder
+89,2026-07-04,TBD,Round of 16,,Winner Match 73,Winner Match 75,TBD,TBD,pending,,,,,Knockout official placeholder
+90,2026-07-04,TBD,Round of 16,,Winner Match 74,Winner Match 77,TBD,TBD,pending,,,,,Knockout official placeholder
+91,2026-07-05,TBD,Round of 16,,Winner Match 76,Winner Match 78,TBD,TBD,pending,,,,,Knockout official placeholder
+92,2026-07-05,TBD,Round of 16,,Winner Match 79,Winner Match 80,TBD,TBD,pending,,,,,Knockout official placeholder
+93,2026-07-06,TBD,Round of 16,,Winner Match 83,Winner Match 84,TBD,TBD,pending,,,,,Knockout official placeholder
+94,2026-07-06,TBD,Round of 16,,Winner Match 81,Winner Match 82,TBD,TBD,pending,,,,,Knockout official placeholder
+95,2026-07-07,TBD,Round of 16,,Winner Match 86,Winner Match 88,TBD,TBD,pending,,,,,Knockout official placeholder
+96,2026-07-07,TBD,Round of 16,,Winner Match 85,Winner Match 87,TBD,TBD,pending,,,,,Knockout official placeholder
+97,2026-07-09,TBD,Quarter-finals,,Winner Match 89,Winner Match 90,TBD,TBD,pending,,,,,Knockout official placeholder
+98,2026-07-10,TBD,Quarter-finals,,Winner Match 93,Winner Match 94,TBD,TBD,pending,,,,,Knockout official placeholder
+99,2026-07-11,TBD,Quarter-finals,,Winner Match 91,Winner Match 92,TBD,TBD,pending,,,,,Knockout official placeholder
+100,2026-07-11,TBD,Quarter-finals,,Winner Match 95,Winner Match 96,TBD,TBD,pending,,,,,Knockout official placeholder
+101,2026-07-14,TBD,Semi-finals,,Winner Match 97,Winner Match 98,TBD,TBD,pending,,,,,Knockout official placeholder
+102,2026-07-15,TBD,Semi-finals,,Winner Match 99,Winner Match 100,TBD,TBD,pending,,,,,Knockout official placeholder
+103,2026-07-18,TBD,Third-place,,Loser Match 101,Loser Match 102,TBD,TBD,pending,,,,,Knockout official placeholder
+104,2026-07-19,TBD,Final,,Winner Match 101,Winner Match 102,TBD,TBD,pending,,,,,Knockout official placeholder

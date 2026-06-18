@@ -1,0 +1,623 @@
+{
+  "foundParticipantCount": 19,
+  "foundParticipants": [
+    "p1",
+    "p2",
+    "p3",
+    "p4",
+    "p5",
+    "p6",
+    "p7",
+    "p8",
+    "p9",
+    "p10",
+    "p11",
+    "p12",
+    "p13",
+    "p14",
+    "p15",
+    "p16",
+    "p17",
+    "p19",
+    "p20"
+  ],
+  "notFoundParticipants": [
+    "JAVIER",
+    "NICOLÁS CASTAÑEDA"
+  ],
+  "imported": 1368,
+  "updated": 0,
+  "errors": [
+    "Fila 1155: participante no encontrado (JAVIER).",
+    "Fila 1159: participante no encontrado (JAVIER).",
+    "Fila 1163: participante no encontrado (JAVIER).",
+    "Fila 1167: participante no encontrado (JAVIER).",
+    "Fila 1171: participante no encontrado (JAVIER).",
+    "Fila 1175: participante no encontrado (JAVIER).",
+    "Fila 1179: participante no encontrado (JAVIER).",
+    "Fila 1183: participante no encontrado (JAVIER).",
+    "Fila 1187: participante no encontrado (JAVIER).",
+    "Fila 1191: participante no encontrado (JAVIER).",
+    "Fila 1195: participante no encontrado (JAVIER).",
+    "Fila 1199: participante no encontrado (JAVIER).",
+    "Fila 1203: participante no encontrado (JAVIER).",
+    "Fila 1207: participante no encontrado (JAVIER).",
+    "Fila 1211: participante no encontrado (JAVIER).",
+    "Fila 1215: participante no encontrado (JAVIER).",
+    "Fila 1219: participante no encontrado (JAVIER).",
+    "Fila 1223: participante no encontrado (JAVIER).",
+    "Fila 1227: participante no encontrado (JAVIER).",
+    "Fila 1231: participante no encontrado (JAVIER).",
+    "Fila 1235: participante no encontrado (JAVIER).",
+    "Fila 1239: participante no encontrado (JAVIER).",
+    "Fila 1243: participante no encontrado (JAVIER).",
+    "Fila 1247: participante no encontrado (JAVIER).",
+    "Fila 1251: participante no encontrado (JAVIER).",
+    "Fila 1255: participante no encontrado (JAVIER).",
+    "Fila 1259: participante no encontrado (JAVIER).",
+    "Fila 1263: participante no encontrado (JAVIER).",
+    "Fila 1267: participante no encontrado (JAVIER).",
+    "Fila 1271: participante no encontrado (JAVIER).",
+    "Fila 1275: participante no encontrado (JAVIER).",
+    "Fila 1279: participante no encontrado (JAVIER).",
+    "Fila 1283: participante no encontrado (JAVIER).",
+    "Fila 1287: participante no encontrado (JAVIER).",
+    "Fila 1291: participante no encontrado (JAVIER).",
+    "Fila 1295: participante no encontrado (JAVIER).",
+    "Fila 1299: participante no encontrado (JAVIER).",
+    "Fila 1303: participante no encontrado (JAVIER).",
+    "Fila 1307: participante no encontrado (JAVIER).",
+    "Fila 1311: participante no encontrado (JAVIER).",
+    "Fila 1315: participante no encontrado (JAVIER).",
+    "Fila 1319: participante no encontrado (JAVIER).",
+    "Fila 1323: participante no encontrado (JAVIER).",
+    "Fila 1327: participante no encontrado (JAVIER).",
+    "Fila 1331: participante no encontrado (JAVIER).",
+    "Fila 1335: participante no encontrado (JAVIER).",
+    "Fila 1339: participante no encontrado (JAVIER).",
+    "Fila 1343: participante no encontrado (JAVIER).",
+    "Fila 1347: participante no encontrado (JAVIER).",
+    "Fila 1351: participante no encontrado (JAVIER).",
+    "Fila 1355: participante no encontrado (JAVIER).",
+    "Fila 1359: participante no encontrado (JAVIER).",
+    "Fila 1363: participante no encontrado (JAVIER).",
+    "Fila 1367: participante no encontrado (JAVIER).",
+    "Fila 1371: participante no encontrado (JAVIER).",
+    "Fila 1375: participante no encontrado (JAVIER).",
+    "Fila 1379: participante no encontrado (JAVIER).",
+    "Fila 1383: participante no encontrado (JAVIER).",
+    "Fila 1387: participante no encontrado (JAVIER).",
+    "Fila 1391: participante no encontrado (JAVIER).",
+    "Fila 1395: participante no encontrado (JAVIER).",
+    "Fila 1399: participante no encontrado (JAVIER).",
+    "Fila 1403: participante no encontrado (JAVIER).",
+    "Fila 1407: participante no encontrado (JAVIER).",
+    "Fila 1411: participante no encontrado (JAVIER).",
+    "Fila 1415: participante no encontrado (JAVIER).",
+    "Fila 1419: participante no encontrado (JAVIER).",
+    "Fila 1423: participante no encontrado (JAVIER).",
+    "Fila 1427: participante no encontrado (JAVIER).",
+    "Fila 1431: participante no encontrado (JAVIER).",
+    "Fila 1435: participante no encontrado (JAVIER).",
+    "Fila 1439: participante no encontrado (JAVIER).",
+    "Fila 1442: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1443: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1444: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1445: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1446: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1447: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1448: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1449: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1450: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1451: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1452: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1453: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1454: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1455: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1456: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1457: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1458: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1459: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1460: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1461: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1462: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1463: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1464: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1465: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1466: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1467: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1468: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1469: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1470: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1471: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1472: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1473: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1474: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1475: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1476: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1477: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1478: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1479: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1480: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1481: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1482: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1483: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1484: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1485: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1486: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1487: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1488: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1489: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1490: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1491: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1492: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1493: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1494: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1495: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1496: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1497: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1498: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1499: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1500: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1501: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1502: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1503: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1504: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1505: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1506: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1507: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1508: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1509: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1510: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1511: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1512: participante no encontrado (NICOLÁS CASTAÑEDA).",
+    "Fila 1513: participante no encontrado (NICOLÁS CASTAÑEDA)."
+  ],
+  "incompleteParticipants": [
+    {
+      "participant": {
+        "id": "p18",
+        "name": "Sebastián Uribe (H Claudia)",
+        "email": "",
+        "phone": "",
+        "paid": true,
+        "paymentMethod": "otro"
+      },
+      "groupStageComplete": false,
+      "missingMatches": [
+        {
+          "matchNumber": 1,
+          "group": "A",
+          "homeTeam": "Mexico",
+          "awayTeam": "South Africa"
+        },
+        {
+          "matchNumber": 2,
+          "group": "A",
+          "homeTeam": "South Korea",
+          "awayTeam": "Czechia"
+        },
+        {
+          "matchNumber": 3,
+          "group": "B",
+          "homeTeam": "Canada",
+          "awayTeam": "Bosnia and Herzegovina"
+        },
+        {
+          "matchNumber": 4,
+          "group": "D",
+          "homeTeam": "United States",
+          "awayTeam": "Paraguay"
+        },
+        {
+          "matchNumber": 5,
+          "group": "B",
+          "homeTeam": "Qatar",
+          "awayTeam": "Switzerland"
+        },
+        {
+          "matchNumber": 6,
+          "group": "C",
+          "homeTeam": "Brazil",
+          "awayTeam": "Morocco"
+        },
+        {
+          "matchNumber": 7,
+          "group": "C",
+          "homeTeam": "Haiti",
+          "awayTeam": "Scotland"
+        },
+        {
+          "matchNumber": 8,
+          "group": "D",
+          "homeTeam": "Australia",
+          "awayTeam": "Turkey"
+        },
+        {
+          "matchNumber": 9,
+          "group": "E",
+          "homeTeam": "Germany",
+          "awayTeam": "Curacao"
+        },
+        {
+          "matchNumber": 10,
+          "group": "F",
+          "homeTeam": "Netherlands",
+          "awayTeam": "Japan"
+        },
+        {
+          "matchNumber": 11,
+          "group": "E",
+          "homeTeam": "Ivory Coast",
+          "awayTeam": "Ecuador"
+        },
+        {
+          "matchNumber": 12,
+          "group": "F",
+          "homeTeam": "Sweden",
+          "awayTeam": "Tunisia"
+        },
+        {
+          "matchNumber": 13,
+          "group": "H",
+          "homeTeam": "Spain",
+          "awayTeam": "Cape Verde"
+        },
+        {
+          "matchNumber": 14,
+          "group": "G",
+          "homeTeam": "Belgium",
+          "awayTeam": "Egypt"
+        },
+        {
+          "matchNumber": 15,
+          "group": "H",
+          "homeTeam": "Saudi Arabia",
+          "awayTeam": "Uruguay"
+        },
+        {
+          "matchNumber": 16,
+          "group": "G",
+          "homeTeam": "Iran",
+          "awayTeam": "New Zealand"
+        },
+        {
+          "matchNumber": 17,
+          "group": "I",
+          "homeTeam": "France",
+          "awayTeam": "Senegal"
+        },
+        {
+          "matchNumber": 18,
+          "group": "I",
+          "homeTeam": "Iraq",
+          "awayTeam": "Norway"
+        },
+        {
+          "matchNumber": 19,
+          "group": "J",
+          "homeTeam": "Argentina",
+          "awayTeam": "Algeria"
+        },
+        {
+          "matchNumber": 20,
+          "group": "J",
+          "homeTeam": "Austria",
+          "awayTeam": "Jordan"
+        },
+        {
+          "matchNumber": 21,
+          "group": "K",
+          "homeTeam": "Portugal",
+          "awayTeam": "DR Congo"
+        },
+        {
+          "matchNumber": 22,
+          "group": "L",
+          "homeTeam": "England",
+          "awayTeam": "Croatia"
+        },
+        {
+          "matchNumber": 23,
+          "group": "L",
+          "homeTeam": "Ghana",
+          "awayTeam": "Panama"
+        },
+        {
+          "matchNumber": 24,
+          "group": "K",
+          "homeTeam": "Uzbekistan",
+          "awayTeam": "Colombia"
+        },
+        {
+          "matchNumber": 25,
+          "group": "A",
+          "homeTeam": "Czechia",
+          "awayTeam": "South Africa"
+        },
+        {
+          "matchNumber": 26,
+          "group": "B",
+          "homeTeam": "Switzerland",
+          "awayTeam": "Bosnia and Herzegovina"
+        },
+        {
+          "matchNumber": 27,
+          "group": "B",
+          "homeTeam": "Canada",
+          "awayTeam": "Qatar"
+        },
+        {
+          "matchNumber": 28,
+          "group": "A",
+          "homeTeam": "Mexico",
+          "awayTeam": "South Korea"
+        },
+        {
+          "matchNumber": 29,
+          "group": "D",
+          "homeTeam": "United States",
+          "awayTeam": "Australia"
+        },
+        {
+          "matchNumber": 30,
+          "group": "C",
+          "homeTeam": "Scotland",
+          "awayTeam": "Morocco"
+        },
+        {
+          "matchNumber": 31,
+          "group": "C",
+          "homeTeam": "Brazil",
+          "awayTeam": "Haiti"
+        },
+        {
+          "matchNumber": 32,
+          "group": "D",
+          "homeTeam": "Turkey",
+          "awayTeam": "Paraguay"
+        },
+        {
+          "matchNumber": 33,
+          "group": "F",
+          "homeTeam": "Netherlands",
+          "awayTeam": "Sweden"
+        },
+        {
+          "matchNumber": 34,
+          "group": "E",
+          "homeTeam": "Germany",
+          "awayTeam": "Ivory Coast"
+        },
+        {
+          "matchNumber": 35,
+          "group": "E",
+          "homeTeam": "Ecuador",
+          "awayTeam": "Curacao"
+        },
+        {
+          "matchNumber": 36,
+          "group": "F",
+          "homeTeam": "Tunisia",
+          "awayTeam": "Japan"
+        },
+        {
+          "matchNumber": 37,
+          "group": "H",
+          "homeTeam": "Spain",
+          "awayTeam": "Saudi Arabia"
+        },
+        {
+          "matchNumber": 38,
+          "group": "G",
+          "homeTeam": "Belgium",
+          "awayTeam": "Iran"
+        },
+        {
+          "matchNumber": 39,
+          "group": "H",
+          "homeTeam": "Uruguay",
+          "awayTeam": "Cape Verde"
+        },
+        {
+          "matchNumber": 40,
+          "group": "G",
+          "homeTeam": "New Zealand",
+          "awayTeam": "Egypt"
+        },
+        {
+          "matchNumber": 41,
+          "group": "J",
+          "homeTeam": "Argentina",
+          "awayTeam": "Austria"
+        },
+        {
+          "matchNumber": 42,
+          "group": "I",
+          "homeTeam": "France",
+          "awayTeam": "Iraq"
+        },
+        {
+          "matchNumber": 43,
+          "group": "I",
+          "homeTeam": "Norway",
+          "awayTeam": "Senegal"
+        },
+        {
+          "matchNumber": 44,
+          "group": "J",
+          "homeTeam": "Jordan",
+          "awayTeam": "Algeria"
+        },
+        {
+          "matchNumber": 45,
+          "group": "K",
+          "homeTeam": "Portugal",
+          "awayTeam": "Uzbekistan"
+        },
+        {
+          "matchNumber": 46,
+          "group": "L",
+          "homeTeam": "England",
+          "awayTeam": "Ghana"
+        },
+        {
+          "matchNumber": 47,
+          "group": "L",
+          "homeTeam": "Panama",
+          "awayTeam": "Croatia"
+        },
+        {
+          "matchNumber": 48,
+          "group": "K",
+          "homeTeam": "Colombia",
+          "awayTeam": "DR Congo"
+        },
+        {
+          "matchNumber": 49,
+          "group": "B",
+          "homeTeam": "Switzerland",
+          "awayTeam": "Canada"
+        },
+        {
+          "matchNumber": 50,
+          "group": "B",
+          "homeTeam": "Bosnia and Herzegovina",
+          "awayTeam": "Qatar"
+        },
+        {
+          "matchNumber": 51,
+          "group": "C",
+          "homeTeam": "Scotland",
+          "awayTeam": "Brazil"
+        },
+        {
+          "matchNumber": 52,
+          "group": "C",
+          "homeTeam": "Morocco",
+          "awayTeam": "Haiti"
+        },
+        {
+          "matchNumber": 53,
+          "group": "A",
+          "homeTeam": "Czechia",
+          "awayTeam": "Mexico"
+        },
+        {
+          "matchNumber": 54,
+          "group": "A",
+          "homeTeam": "South Africa",
+          "awayTeam": "South Korea"
+        },
+        {
+          "matchNumber": 55,
+          "group": "E",
+          "homeTeam": "Ecuador",
+          "awayTeam": "Germany"
+        },
+        {
+          "matchNumber": 56,
+          "group": "E",
+          "homeTeam": "Curacao",
+          "awayTeam": "Ivory Coast"
+        },
+        {
+          "matchNumber": 57,
+          "group": "F",
+          "homeTeam": "Tunisia",
+          "awayTeam": "Netherlands"
+        },
+        {
+          "matchNumber": 58,
+          "group": "F",
+          "homeTeam": "Japan",
+          "awayTeam": "Sweden"
+        },
+        {
+          "matchNumber": 59,
+          "group": "D",
+          "homeTeam": "Turkey",
+          "awayTeam": "United States"
+        },
+        {
+          "matchNumber": 60,
+          "group": "D",
+          "homeTeam": "Paraguay",
+          "awayTeam": "Australia"
+        },
+        {
+          "matchNumber": 61,
+          "group": "I",
+          "homeTeam": "Norway",
+          "awayTeam": "France"
+        },
+        {
+          "matchNumber": 62,
+          "group": "I",
+          "homeTeam": "Senegal",
+          "awayTeam": "Iraq"
+        },
+        {
+          "matchNumber": 63,
+          "group": "H",
+          "homeTeam": "Uruguay",
+          "awayTeam": "Spain"
+        },
+        {
+          "matchNumber": 64,
+          "group": "H",
+          "homeTeam": "Cape Verde",
+          "awayTeam": "Saudi Arabia"
+        },
+        {
+          "matchNumber": 65,
+          "group": "G",
+          "homeTeam": "New Zealand",
+          "awayTeam": "Belgium"
+        },
+        {
+          "matchNumber": 66,
+          "group": "G",
+          "homeTeam": "Egypt",
+          "awayTeam": "Iran"
+        },
+        {
+          "matchNumber": 67,
+          "group": "L",
+          "homeTeam": "Panama",
+          "awayTeam": "England"
+        },
+        {
+          "matchNumber": 68,
+          "group": "L",
+          "homeTeam": "Croatia",
+          "awayTeam": "Ghana"
+        },
+        {
+          "matchNumber": 69,
+          "group": "K",
+          "homeTeam": "Colombia",
+          "awayTeam": "Portugal"
+        },
+        {
+          "matchNumber": 70,
+          "group": "K",
+          "homeTeam": "DR Congo",
+          "awayTeam": "Uzbekistan"
+        },
+        {
+          "matchNumber": 71,
+          "group": "J",
+          "homeTeam": "Jordan",
+          "awayTeam": "Argentina"
+        },
+        {
+          "matchNumber": 72,
+          "group": "J",
+          "homeTeam": "Algeria",
+          "awayTeam": "Austria"
+        }
+      ]
+    }
+  ]
+}

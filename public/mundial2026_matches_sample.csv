@@ -1,0 +1,6 @@
+match_number,date,time,stage,group,home_team,away_team,stadium,city,status
+1,2026-06-11,19:00,Group Stage,A,Mexico,South Africa,Estadio Azteca,Ciudad de México,pending
+2,2026-06-12,16:00,Group Stage,B,Canada,Japan,BMO Field,Toronto,pending
+3,2026-06-13,18:00,Group Stage,C,United States,Germany,SoFi Stadium,Los Angeles,pending
+4,2026-06-28,17:00,Round of 32,Winner A,Winner Group A,Runner-up Group B,MetLife Stadium,New York New Jersey,pending
+5,2026-07-04,19:00,Quarter-finals,QF,Winner Match 4,Winner Match 5,AT&T Stadium,Dallas,pending
