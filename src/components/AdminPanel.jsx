@@ -465,11 +465,28 @@ function AdminPanel({
             <Download size={18} />
             Exportar puntos por fase
           </button>
+          <button
+            className="secondary-button"
+            disabled={!isAdmin || initialMigration.loading}
+            onClick={runInitialMigration}
+            type="button"
+          >
+            <Upload size={18} />
+            {initialMigration.loading ? 'Migrando datos...' : 'Migrar datos iniciales'}
+          </button>
           <button className="danger-button" disabled={!isAdmin} onClick={resetData} type="button">
             <RotateCcw size={18} />
             Restaurar datos oficiales
           </button>
         </div>
+        {initialMigration.error && <div className="notice error-notice">{initialMigration.error}</div>}
+        {initialMigration.summary && (
+          <div className="notice success-notice">
+            Migración lista: {initialMigration.summary.participantsCreated} participantes creados,{' '}
+            {initialMigration.summary.participantsUpdated} actualizados, {initialMigration.summary.matchesCreated} partidos creados,{' '}
+            {initialMigration.summary.predictionsCreated} predicciones creadas.
+          </div>
+        )}
       </div>
 
       <div className="summary-grid">
