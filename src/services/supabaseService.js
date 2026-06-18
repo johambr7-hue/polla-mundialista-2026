@@ -1,5 +1,6 @@
 import { defaultSettings } from '../data/sampleData';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
+import { buildRanking } from '../utils/scoring';
 
 export { isSupabaseConfigured };
 
@@ -17,6 +18,14 @@ const fromNullableNumber = (value) => (value === null || value === undefined ? '
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const isUuid = (value) => uuidPattern.test(String(value ?? ''));
 const withUuid = (row, id) => (isUuid(id) ? { id, ...row } : row);
+const normalizeName = (value) =>
+  String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ');
+const getMatchCode = (match) => match.matchCode ?? match.match_code ?? `match-${match.matchNumber ?? match.id}`;
 
 const participantFromRow = (row) => ({
   id: row.id,
@@ -29,11 +38,7 @@ const participantFromRow = (row) => ({
 
 const participantToRow = (participant) => withUuid({
   name: participant.name,
-  normalized_name: String(participant.name ?? '')
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, ''),
+  normalized_name: normalizeName(participant.name),
   email: asEmptyString(participant.email),
   phone: asEmptyString(participant.phone),
   paid: Boolean(participant.paid),
@@ -42,6 +47,7 @@ const participantToRow = (participant) => withUuid({
 
 const matchFromRow = (row) => ({
   id: row.id,
+  matchCode: row.match_code ?? '',
   matchNumber: fromNullableNumber(row.match_number),
   date: row.match_date ?? '',
   time: row.match_time ?? '',
@@ -59,7 +65,7 @@ const matchFromRow = (row) => ({
 });
 
 const matchToRow = (match) => withUuid({
-  match_code: match.matchCode ?? match.match_code ?? `match-${match.matchNumber ?? match.id ?? crypto.randomUUID()}`,
+  match_code: getMatchCode(match),
   phase: asEmptyString(match.stage),
   group_name: asEmptyString(match.group),
   match_number: nullableNumber(match.matchNumber),
@@ -363,4 +369,282 @@ export const saveStateSection = async (section, value) => {
   if (section === 'payments') return savePayments(value);
   if (section === 'scoreDetails') return saveScoreDetails(value);
   return null;
+};
+
+const insertRow = async (table, row) => {
+  const client = requireSupabase();
+  const { data, error } = await client.from(table).insert(row).select().single();
+  if (error) throw error;
+  return data;
+};
+
+const updateRow = async (table, id, row) => {
+  const client = requireSupabase();
+  const { id: _ignoredId, created_at: _ignoredCreatedAt, ...payload } = row;
+  const { data, error } = await client.from(table).update(payload).eq('id', id).select().single();
+  if (error) throw error;
+  return data;
+};
+
+const upsertByExisting = async ({ table, existing, row, fromRow }) => {
+  if (existing?.id) {
+    return { row: fromRow(await updateRow(table, existing.id, row)), action: 'updated' };
+  }
+
+  return { row: fromRow(await insertRow(table, row)), action: 'created' };
+};
+
+export const getSupabaseDataCounts = async () => {
+  const client = requireSupabase();
+  const [participantsResult, matchesResult] = await Promise.all([
+    client.from('participants').select('id', { count: 'exact', head: true }),
+    client.from('matches').select('id', { count: 'exact', head: true })
+  ]);
+
+  if (participantsResult.error) throw participantsResult.error;
+  if (matchesResult.error) throw matchesResult.error;
+
+  return {
+    participants: participantsResult.count ?? 0,
+    matches: matchesResult.count ?? 0
+  };
+};
+
+export const migrateInitialDataToSupabase = async (sourceState) => {
+  const summary = {
+    participantsCreated: 0,
+    participantsUpdated: 0,
+    matchesCreated: 0,
+    matchesUpdated: 0,
+    predictionsCreated: 0,
+    predictionsUpdated: 0,
+    paymentsCreated: 0,
+    paymentsUpdated: 0,
+    tournamentPredictionsCreated: 0,
+    tournamentPredictionsUpdated: 0,
+    scoreDetailsCreated: 0,
+    scoreDetailsUpdated: 0,
+    errors: [],
+    omitted: []
+  };
+
+  const participants = sourceState.participants ?? [];
+  const matches = sourceState.matches ?? [];
+  const predictions = sourceState.predictions ?? [];
+  const tournamentEntries = sourceState.tournamentEntries ?? {};
+  const finalPredictions = sourceState.finalPredictions ?? {};
+  const settings = { ...defaultSettings, ...(sourceState.settings ?? {}) };
+  const finalResults = sourceState.finalResults ?? { champion: '', second: '', third: '', fourth: '' };
+
+  const [
+    existingParticipants,
+    existingMatches,
+    existingPredictions,
+    existingPayments,
+    existingTournamentPredictions
+  ] = await Promise.all([
+    selectAll('participants', 'name'),
+    selectAll('matches', 'match_number'),
+    selectAll('predictions', 'id'),
+    selectAll('payments', 'participant_id'),
+    selectAll('tournament_predictions', 'participant_id')
+  ]);
+
+  const participantsByNormalizedName = new Map(
+    existingParticipants.map((row) => [row.normalized_name || normalizeName(row.name), row])
+  );
+  const matchesByCode = new Map(existingMatches.map((row) => [row.match_code || `match-${row.match_number}`, row]));
+  const predictionsByPair = new Map(existingPredictions.map((row) => [`${row.participant_id}|${row.match_id}`, row]));
+  const paymentsByParticipant = new Map(existingPayments.map((row) => [row.participant_id, row]));
+  const tournamentByParticipant = new Map(existingTournamentPredictions.map((row) => [row.participant_id, row]));
+  const participantIdMap = new Map();
+  const participantNameMap = new Map();
+  const matchIdMap = new Map();
+  const matchCodeMap = new Map();
+
+  for (const participant of participants) {
+    try {
+      const normalizedName = normalizeName(participant.name);
+      if (!normalizedName) {
+        summary.omitted.push(`Participante omitido sin nombre: ${participant.id ?? 'sin id'}`);
+        continue;
+      }
+
+      const result = await upsertByExisting({
+        table: 'participants',
+        existing: participantsByNormalizedName.get(normalizedName),
+        row: participantToRow(participant),
+        fromRow: participantFromRow
+      });
+
+      if (result.action === 'created') summary.participantsCreated += 1;
+      if (result.action === 'updated') summary.participantsUpdated += 1;
+
+      participantsByNormalizedName.set(normalizedName, { id: result.row.id, name: result.row.name, normalized_name: normalizedName });
+      participantIdMap.set(participant.id, result.row.id);
+      participantNameMap.set(normalizedName, result.row.id);
+    } catch (error) {
+      summary.errors.push(`Participante ${participant.name ?? participant.id}: ${error.message}`);
+    }
+  }
+
+  for (const match of matches) {
+    try {
+      const matchCode = getMatchCode(match);
+      if (!matchCode) {
+        summary.omitted.push(`Partido omitido sin match_code: ${match.id ?? match.matchNumber ?? 'sin id'}`);
+        continue;
+      }
+
+      const result = await upsertByExisting({
+        table: 'matches',
+        existing: matchesByCode.get(matchCode),
+        row: matchToRow({ ...match, matchCode }),
+        fromRow: matchFromRow
+      });
+
+      if (result.action === 'created') summary.matchesCreated += 1;
+      if (result.action === 'updated') summary.matchesUpdated += 1;
+
+      matchesByCode.set(matchCode, { id: result.row.id, match_code: matchCode });
+      matchIdMap.set(match.id, result.row.id);
+      matchCodeMap.set(matchCode, result.row.id);
+    } catch (error) {
+      summary.errors.push(`Partido ${match.matchNumber ?? match.id}: ${error.message}`);
+    }
+  }
+
+  for (const prediction of predictions) {
+    try {
+      const participantId = participantIdMap.get(prediction.participantId);
+      const matchId = matchIdMap.get(prediction.matchId);
+      if (!participantId || !matchId) {
+        summary.omitted.push(`Predicción omitida sin UUID real: ${prediction.id ?? `${prediction.participantId}-${prediction.matchId}`}`);
+        continue;
+      }
+
+      const localMatch = matches.find((match) => match.id === prediction.matchId);
+      const row = predictionToRow({
+        ...prediction,
+        id: undefined,
+        participantId,
+        matchId,
+        phase: prediction.phase ?? localMatch?.stage ?? '',
+        groupName: prediction.groupName ?? localMatch?.group ?? '',
+        predictedHomeTeam: prediction.predictedHomeTeam ?? localMatch?.homeTeam ?? '',
+        predictedAwayTeam: prediction.predictedAwayTeam ?? localMatch?.awayTeam ?? ''
+      });
+      const key = `${participantId}|${matchId}`;
+      const result = await upsertByExisting({
+        table: 'predictions',
+        existing: predictionsByPair.get(key),
+        row,
+        fromRow: predictionFromRow
+      });
+
+      if (result.action === 'created') summary.predictionsCreated += 1;
+      if (result.action === 'updated') summary.predictionsUpdated += 1;
+      predictionsByPair.set(key, { id: result.row.id, participant_id: participantId, match_id: matchId });
+    } catch (error) {
+      summary.errors.push(`Predicción ${prediction.id ?? ''}: ${error.message}`);
+    }
+  }
+
+  for (const participant of participants) {
+    try {
+      const participantId = participantIdMap.get(participant.id) ?? participantNameMap.get(normalizeName(participant.name));
+      if (!participantId) {
+        summary.omitted.push(`Pago omitido sin participante UUID: ${participant.name}`);
+        continue;
+      }
+
+      const row = paymentToRow({
+        participantId,
+        paid: Boolean(participant.paid),
+        paymentMethod: participant.paymentMethod ?? '',
+        amount: participant.paid ? Number(settings.entryFee) : 0,
+        paidAt: ''
+      });
+      const existing = paymentsByParticipant.get(participantId);
+      const result = await upsertByExisting({ table: 'payments', existing, row, fromRow: paymentFromRow });
+
+      if (result.action === 'created') summary.paymentsCreated += 1;
+      if (result.action === 'updated') summary.paymentsUpdated += 1;
+      paymentsByParticipant.set(participantId, { id: result.row.id, participant_id: participantId });
+    } catch (error) {
+      summary.errors.push(`Pago ${participant.name ?? participant.id}: ${error.message}`);
+    }
+  }
+
+  for (const participant of participants) {
+    try {
+      const participantId = participantIdMap.get(participant.id) ?? participantNameMap.get(normalizeName(participant.name));
+      if (!participantId) {
+        summary.omitted.push(`Resultado final omitido sin participante UUID: ${participant.name}`);
+        continue;
+      }
+
+      const finalPrediction = finalPredictions[participant.id] ?? tournamentEntries[participant.id]?.finalResults;
+      if (!finalPrediction) {
+        summary.omitted.push(`Resultado final omitido sin datos: ${participant.name}`);
+        continue;
+      }
+
+      const row = tournamentPredictionToRow({
+        participantId,
+        champion: finalPrediction.champion,
+        second: finalPrediction.second,
+        third: finalPrediction.third,
+        fourth: finalPrediction.fourth
+      });
+      const existing = tournamentByParticipant.get(participantId);
+      const result = await upsertByExisting({
+        table: 'tournament_predictions',
+        existing,
+        row,
+        fromRow: tournamentPredictionFromRow
+      });
+
+      if (result.action === 'created') summary.tournamentPredictionsCreated += 1;
+      if (result.action === 'updated') summary.tournamentPredictionsUpdated += 1;
+      tournamentByParticipant.set(participantId, { id: result.row.id, participant_id: participantId });
+    } catch (error) {
+      summary.errors.push(`Resultado final ${participant.name ?? participant.id}: ${error.message}`);
+    }
+  }
+
+  await saveSettings({ ...settings, finalPredictions, finalResults });
+
+  try {
+    const mappedParticipants = participants.map((participant) => ({
+      ...participant,
+      id: participantIdMap.get(participant.id) ?? participant.id
+    }));
+    const mappedMatches = matches.map((match) => ({
+      ...match,
+      id: matchIdMap.get(match.id) ?? match.id
+    }));
+    const mappedPredictions = predictions.flatMap((prediction) => {
+      const participantId = participantIdMap.get(prediction.participantId);
+      const matchId = matchIdMap.get(prediction.matchId);
+      return participantId && matchId ? [{ ...prediction, participantId, matchId }] : [];
+    });
+    const ranking = buildRanking(mappedParticipants, mappedMatches, mappedPredictions, finalPredictions, finalResults, settings);
+    const scoreDetails = ranking.flatMap((participant) =>
+      (participant.pointsDetail ?? []).map((detail) => ({
+        participantId: participant.id,
+        phase: detail.fase,
+        points: detail.puntos_total_fase,
+        type: 'fase',
+        detail
+      }))
+    );
+
+    const savedDetails = await saveScoreDetails(scoreDetails);
+    summary.scoreDetailsCreated = savedDetails.length;
+  } catch (error) {
+    summary.errors.push(`Detalle de puntos: ${error.message}`);
+  }
+
+  return summary;
 };

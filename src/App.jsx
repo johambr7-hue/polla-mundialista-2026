@@ -25,8 +25,10 @@ import TournamentPredictionPanel from './components/TournamentPredictionPanel';
 import { defaultSettings } from './data/sampleData';
 import {
   deleteParticipant as deleteParticipantFromSupabase,
+  getSupabaseDataCounts,
   isSupabaseConfigured,
   loadSupabaseState,
+  migrateInitialDataToSupabase,
   saveScoreDetails,
   saveStateSection
 } from './services/supabaseService';
@@ -259,6 +261,25 @@ function App() {
     }
   };
 
+  const migrateInitialData = async () => {
+    setSaveError('');
+    const counts = await getSupabaseDataCounts();
+    if (
+      (counts.participants > 0 || counts.matches > 0) &&
+      !window.confirm('Ya existen datos en Supabase. ¿Deseas actualizar los datos existentes sin duplicarlos?')
+    ) {
+      return null;
+    }
+
+    const response = await fetch('/master_state.json');
+    if (!response.ok) throw new Error('No se pudo leer master_state.json para la migración inicial.');
+
+    const sourceState = await response.json();
+    const summary = await migrateInitialDataToSupabase(sourceState);
+    await loadData({ preferredParticipantId: currentParticipantId, showLoading: true });
+    return summary;
+  };
+
   const exportAll = () => {
     downloadCsv('polla-mundialista-ranking.csv', [
       [
@@ -410,6 +431,7 @@ function App() {
           <TournamentPredictionPanel
             currentParticipantId={currentParticipantId}
             isAdmin={isAdmin}
+            migrateInitialData={migrateInitialData}
             matches={state.matches}
             participants={state.participants}
             settings={state.settings}

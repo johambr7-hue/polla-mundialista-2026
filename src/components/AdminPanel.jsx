@@ -52,6 +52,7 @@ function AdminPanel({
   finalResults,
   handleAdminLogin,
   isAdmin,
+  migrateInitialData,
   matches,
   participants,
   predictions,
@@ -71,6 +72,7 @@ function AdminPanel({
   const [resultDrafts, setResultDrafts] = useState(() => createResultDrafts(matches));
   const [predictionImportSummary, setPredictionImportSummary] = useState(null);
   const [masterImport, setMasterImport] = useState({ fileName: '', csvText: '', validation: null });
+  const [initialMigration, setInitialMigration] = useState({ loading: false, summary: null, error: '' });
   const [activeAdminTab, setActiveAdminTab] = useState('results');
   const [resultStatusFilter, setResultStatusFilter] = useState('pendiente');
   const [resultStageFilter, setResultStageFilter] = useState('all');
@@ -385,6 +387,26 @@ function AdminPanel({
     });
   };
 
+  const runInitialMigration = async () => {
+    if (!migrateInitialData) return;
+
+    setInitialMigration({ loading: true, summary: null, error: '' });
+    try {
+      const summary = await migrateInitialData();
+      setInitialMigration({
+        loading: false,
+        summary,
+        error: summary ? '' : 'Migración cancelada por el usuario.'
+      });
+    } catch (error) {
+      setInitialMigration({
+        loading: false,
+        summary: null,
+        error: error.message ?? 'No se pudo migrar la información inicial.'
+      });
+    }
+  };
+
   return (
     <section className="stack-list">
       <div className="panel">
@@ -487,6 +509,67 @@ function AdminPanel({
 
       {activeAdminTab === 'imports' && (
       <>
+      <div className="panel">
+        <div className="panel-heading">
+          <div>
+            <h3>Migrar datos iniciales a Supabase</h3>
+            <p className="muted">Carga la polla completa desde master_state.json usando UUID reales generados por Supabase.</p>
+          </div>
+          <Database size={18} />
+        </div>
+        <div className="admin-actions">
+          <button className="primary-button" disabled={!isAdmin || initialMigration.loading} onClick={runInitialMigration} type="button">
+            <Upload size={18} />
+            {initialMigration.loading ? 'Migrando...' : 'Migrar datos iniciales a Supabase'}
+          </button>
+        </div>
+        {initialMigration.error && <div className="notice error-notice">{initialMigration.error}</div>}
+        {initialMigration.summary && (
+          <div className="stack-list tight">
+            <div className="summary-grid">
+              <article>
+                <span>Participantes creados</span>
+                <strong>{initialMigration.summary.participantsCreated}</strong>
+              </article>
+              <article>
+                <span>Participantes actualizados</span>
+                <strong>{initialMigration.summary.participantsUpdated}</strong>
+              </article>
+              <article>
+                <span>Partidos creados</span>
+                <strong>{initialMigration.summary.matchesCreated}</strong>
+              </article>
+              <article>
+                <span>Partidos actualizados</span>
+                <strong>{initialMigration.summary.matchesUpdated}</strong>
+              </article>
+              <article>
+                <span>Predicciones creadas</span>
+                <strong>{initialMigration.summary.predictionsCreated}</strong>
+              </article>
+              <article>
+                <span>Predicciones actualizadas</span>
+                <strong>{initialMigration.summary.predictionsUpdated}</strong>
+              </article>
+              <article>
+                <span>Pagos creados</span>
+                <strong>{initialMigration.summary.paymentsCreated}</strong>
+              </article>
+              <article>
+                <span>Registros omitidos</span>
+                <strong>{initialMigration.summary.omitted.length}</strong>
+              </article>
+            </div>
+            {initialMigration.summary.errors.length > 0 && (
+              <div className="notice error-notice">
+                Errores: {initialMigration.summary.errors.slice(0, 6).join(' | ')}
+                {initialMigration.summary.errors.length > 6 ? ` y ${initialMigration.summary.errors.length - 6} más.` : ''}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       <div className="panel">
         <div className="panel-heading">
           <div>
