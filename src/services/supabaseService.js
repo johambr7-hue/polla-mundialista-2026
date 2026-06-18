@@ -351,7 +351,14 @@ export const savePayments = async (payments) =>
 
 export const getSettings = async () => normalizeSettings(await selectAll('settings', 'key'));
 export const saveSettings = async (settings) => {
-  const [row] = await upsertRows('settings', { key: 'official', value: settings });
+  const client = requireSupabase();
+  const { data: row, error } = await client
+    .from('settings')
+    .upsert({ key: 'official', value: settings }, { onConflict: 'key' })
+    .select()
+    .single();
+
+  if (error) throw error;
   return normalizeSettings([row]);
 };
 
