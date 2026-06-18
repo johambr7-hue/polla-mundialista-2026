@@ -431,7 +431,6 @@ function App() {
           <TournamentPredictionPanel
             currentParticipantId={currentParticipantId}
             isAdmin={isAdmin}
-            migrateInitialData={migrateInitialData}
             matches={state.matches}
             participants={state.participants}
             settings={state.settings}
@@ -504,6 +503,7 @@ function App() {
             finalResults={state.finalResults}
             handleAdminLogin={handleAdminLogin}
             isAdmin={isAdmin}
+            migrateInitialData={migrateInitialData}
             matches={state.matches}
             participants={state.participants}
             predictions={state.predictions}
