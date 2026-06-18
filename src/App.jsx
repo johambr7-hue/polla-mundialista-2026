@@ -114,7 +114,10 @@ function App() {
       const nextState = {
         ...emptyState,
         ...supabaseState,
-        finalPredictions: supabaseState.settings.finalPredictions ?? supabaseState.finalPredictions ?? {},
+        finalPredictions: {
+          ...(supabaseState.settings.finalPredictions ?? {}),
+          ...(supabaseState.finalPredictions ?? {})
+        },
         finalResults: supabaseState.settings.finalResults ?? supabaseState.finalResults ?? emptyState.finalResults
       };
       setState(nextState);
@@ -223,8 +226,31 @@ function App() {
 
   const updateFinalPredictions = (finalPredictions) => {
     const nextSettings = { ...state.settings, finalPredictions };
-    setState((current) => ({ ...current, finalPredictions, settings: nextSettings }));
+    const nextTournamentEntries = {
+      ...state.tournamentEntries,
+      ...Object.fromEntries(
+        Object.entries(finalPredictions).map(([participantId, prediction]) => [
+          participantId,
+          {
+            ...(state.tournamentEntries?.[participantId] ?? {}),
+            finalResults: {
+              champion: prediction.champion ?? '',
+              second: prediction.second ?? '',
+              third: prediction.third ?? '',
+              fourth: prediction.fourth ?? ''
+            }
+          }
+        ])
+      )
+    };
+    setState((current) => ({
+      ...current,
+      finalPredictions,
+      tournamentEntries: nextTournamentEntries,
+      settings: nextSettings
+    }));
     persistSection('settings', nextSettings);
+    persistSection('tournamentEntries', nextTournamentEntries);
   };
 
   const updateFinalResults = (finalResults) => {

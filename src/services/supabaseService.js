@@ -389,13 +389,24 @@ export const loadSupabaseState = async () => {
       ? { ...participant, paid: payment.paid, paymentMethod: payment.paymentMethod }
       : participant;
   });
+  const finalPredictions = Object.fromEntries(
+    Object.entries(tournamentEntries).map(([participantId, entry]) => [
+      participantId,
+      {
+        champion: entry.finalResults?.champion ?? entry.champion ?? '',
+        second: entry.finalResults?.second ?? entry.second ?? '',
+        third: entry.finalResults?.third ?? entry.third ?? '',
+        fourth: entry.finalResults?.fourth ?? entry.fourth ?? ''
+      }
+    ])
+  );
 
   return {
     participants: participantsWithPayments,
     matches,
     predictions,
     tournamentEntries,
-    finalPredictions: {},
+    finalPredictions,
     finalResults: { champion: '', second: '', third: '', fourth: '' },
     importAudits: [],
     payments,
