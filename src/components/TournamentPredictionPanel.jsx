@@ -37,7 +37,7 @@ function TournamentPredictionPanel({
   const entry = tournamentEntries[currentParticipantId] ?? createEmptyTournamentEntry();
   const bracket = buildBracket(matches, entry);
   const validation = validateTournamentEntry(matches, entry);
-  const locked = isDeadlinePassed(settings.predictionDeadline) && !isAdmin;
+  const locked = (Boolean(settings.predictionsLocked) || isDeadlinePassed(settings.predictionDeadline)) && !isAdmin;
   const [activeView, setActiveView] = useState('Grupos');
   const participantSummary = Object.entries(entry.matchPredictions ?? {}).reduce(
     (acc, [matchNumber, prediction]) => {
@@ -56,6 +56,8 @@ function TournamentPredictionPanel({
   const finalResults = entry.finalResults ?? bracket.finalResults;
 
   const updateEntry = (nextEntry) => {
+    if (locked) return;
+
     const nextValidation = validateTournamentEntry(matches, nextEntry);
     updateTournamentEntries({
       ...tournamentEntries,
@@ -85,6 +87,7 @@ function TournamentPredictionPanel({
   };
 
   const submitEntry = () => {
+    if (locked) return;
     if (!validation.complete) return;
     updateTournamentEntries({
       ...tournamentEntries,
@@ -173,6 +176,11 @@ function TournamentPredictionPanel({
             </button>
           </div>
         </div>
+        {locked && (
+          <div className="notice">
+            Pronósticos cerrados. Solo el administrador puede corregir la polla completa.
+          </div>
+        )}
         <div className="summary-grid">
           <article>
             <span>Participante</span>

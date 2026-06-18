@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BarChart3, ClipboardList, Database, Download, LogIn, RefreshCcw, RotateCcw, Save, Settings, Upload } from 'lucide-react';
+import { BarChart3, ClipboardList, Database, Download, Lock, LogIn, RefreshCcw, RotateCcw, Save, Settings, Unlock, Upload } from 'lucide-react';
 import { downloadCsv } from '../utils/exportCsv';
 import { formatCop } from '../utils/formatters';
 import { getGroupPredictionStatus, importGroupPredictions, reprocessGroupPredictions } from '../utils/importGroupPredictions';
@@ -117,6 +117,13 @@ function AdminPanel({
         match.realHomeScore !== '' && match.realAwayScore !== '' ? { ...match, status: 'jugado' } : match
       )
     );
+  };
+
+  const togglePredictionLock = () => {
+    updateSettings({
+      ...settings,
+      predictionsLocked: !settings.predictionsLocked
+    });
   };
 
   const updateResultDraft = (matchId, field, value) => {
@@ -479,6 +486,10 @@ function AdminPanel({
             <Download size={18} />
             Exportar puntos por fase
           </button>
+          <button className={settings.predictionsLocked ? 'secondary-button' : 'primary-button'} disabled={!isAdmin} onClick={togglePredictionLock} type="button">
+            {settings.predictionsLocked ? <Unlock size={18} /> : <Lock size={18} />}
+            {settings.predictionsLocked ? 'Abrir pronósticos' : 'Cerrar pronósticos'}
+          </button>
           <button
             className="secondary-button"
             disabled={!isAdmin || initialMigration.loading}
@@ -494,6 +505,11 @@ function AdminPanel({
           </button>
         </div>
         {initialMigration.status && <div className="notice">{initialMigration.status}</div>}
+        {settings.predictionsLocked && (
+          <div className="notice">
+            Pronósticos cerrados: los participantes no pueden modificar marcadores ni resultados finales. Solo el administrador puede corregir.
+          </div>
+        )}
         {initialMigration.error && <div className="notice error-notice">{initialMigration.error}</div>}
         {initialMigration.summary && (
           <div className="notice success-notice">

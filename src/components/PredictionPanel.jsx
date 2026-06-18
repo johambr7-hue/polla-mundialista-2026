@@ -36,6 +36,7 @@ function PredictionPanel({
   const [phaseFilter, setPhaseFilter] = useState('Fase de grupos');
   const [groupFilter, setGroupFilter] = useState('Todos los grupos');
   const participantId = isAdmin ? selectedParticipantId : currentParticipantId;
+  const predictionsClosed = Boolean(settings.predictionsLocked) && !isAdmin;
   const participant = participants.find((item) => item.id === participantId);
   const sortedMatches = useMemo(
     () => [...matches].sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)),
@@ -65,6 +66,8 @@ function PredictionPanel({
   };
 
   const upsertPrediction = (match, field, value) => {
+    if (predictionsClosed || match.status === 'jugado') return;
+
     const existing = predictions.find(
       (prediction) => prediction.matchId === match.id && prediction.participantId === participantId
     );
@@ -104,6 +107,8 @@ function PredictionPanel({
   };
 
   const updateFinalPrediction = (field, value) => {
+    if (predictionsClosed) return;
+
     updateFinalPredictions({
       ...finalPredictions,
       [participantId]: {
@@ -117,7 +122,7 @@ function PredictionPanel({
     const prediction = predictions.find(
       (item) => item.matchId === match.id && item.participantId === participantId
     );
-    const locked = match.status === 'jugado';
+    const locked = predictionsClosed || match.status === 'jugado';
     const points = calculatePredictionPoints(prediction, match, settings);
     const knockout = !isGroupStage(match.stage);
     const predictedTeams = {
@@ -207,7 +212,12 @@ function PredictionPanel({
           )}
         </div>
         {prediction?.excludedFromScoring && <p className="muted lock-note">{prediction.exclusionReason}</p>}
-        {locked && <p className="muted lock-note"><Lock size={14} /> Edición bloqueada porque el partido está jugado.</p>}
+        {locked && (
+          <p className="muted lock-note">
+            <Lock size={14} />{' '}
+            {predictionsClosed ? 'Edición bloqueada porque los pronósticos están cerrados.' : 'Edición bloqueada porque el partido está jugado.'}
+          </p>
+        )}
       </article>
     );
   };
@@ -243,6 +253,11 @@ function PredictionPanel({
           <article><span>Aciertos de clasificados</span><strong>{participantSummary.qualifiedTeamHits}</strong></article>
           <article><span>Llaves acertadas</span><strong>{participantSummary.bracketHits}</strong></article>
         </div>
+        {predictionsClosed && (
+          <div className="notice">
+            Pronósticos cerrados. Ya no puedes modificar marcadores ni resultados finales.
+          </div>
+        )}
 
         <div className="final-picks-strip">
           <span>🏆 {displayTeam(finalPrediction.champion) || 'Campeón por definir'}</span>
@@ -298,6 +313,7 @@ function PredictionPanel({
             <label key={field}>
               {label}
               <input
+                disabled={predictionsClosed || !participantId}
                 onChange={(event) => updateFinalPrediction(field, event.target.value)}
                 placeholder={label}
                 value={displayTeam(finalPredictions[participantId]?.[field] ?? '')}
