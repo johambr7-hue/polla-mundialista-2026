@@ -499,7 +499,8 @@ function AdminPanel({
           <div className="notice success-notice">
             Migración lista: {initialMigration.summary.participantsCreated} participantes creados,{' '}
             {initialMigration.summary.participantsUpdated} actualizados, {initialMigration.summary.matchesCreated} partidos creados,{' '}
-            {initialMigration.summary.predictionsCreated} predicciones creadas y{' '}
+            {initialMigration.summary.predictionsStored ?? initialMigration.summary.predictionsCreated} de{' '}
+            {initialMigration.summary.predictionsExpected ?? 'las'} predicciones verificadas y{' '}
             {initialMigration.summary.duplicatePredictionsDeleted ?? 0} duplicadas limpiadas.
           </div>
         )}
@@ -584,6 +585,22 @@ function AdminPanel({
               <article>
                 <span>Predicciones actualizadas</span>
                 <strong>{initialMigration.summary.predictionsUpdated}</strong>
+              </article>
+              <article>
+                <span>Predicciones esperadas</span>
+                <strong>{initialMigration.summary.predictionsExpected ?? 0}</strong>
+              </article>
+              <article>
+                <span>Predicciones verificadas</span>
+                <strong>{initialMigration.summary.predictionsStored ?? 0}</strong>
+              </article>
+              <article>
+                <span>Predicciones faltantes</span>
+                <strong>{initialMigration.summary.predictionsMissing ?? 0}</strong>
+              </article>
+              <article>
+                <span>Faltantes recuperadas</span>
+                <strong>{initialMigration.summary.predictionRepairCreated ?? 0}</strong>
               </article>
               <article>
                 <span>Pagos creados</span>

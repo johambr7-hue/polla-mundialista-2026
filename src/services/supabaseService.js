@@ -469,6 +469,12 @@ export const migrateInitialDataToSupabase = async (sourceState, onProgress = () 
     scoreDetailsCreated: 0,
     scoreDetailsUpdated: 0,
     duplicatePredictionsDeleted: 0,
+    predictionsExpected: 0,
+    predictionsPrepared: 0,
+    predictionsStored: 0,
+    predictionsMissing: 0,
+    predictionRepairCreated: 0,
+    predictionRepairUpdated: 0,
     errors: [],
     omitted: []
   };
@@ -627,6 +633,8 @@ export const migrateInitialDataToSupabase = async (sourceState, onProgress = () 
   }
 
   let savedPredictionCount = 0;
+  summary.predictionsExpected = predictions.length;
+  summary.predictionsPrepared = predictionRows.length;
   onProgress(`Migrando predicciones (0/${predictionRows.length})...`);
   for (const chunk of chunkRows(predictionRows)) {
     try {
@@ -641,6 +649,57 @@ export const migrateInitialDataToSupabase = async (sourceState, onProgress = () 
     } catch (error) {
       summary.errors.push(`Predicciones por lote: ${error.message}`);
     }
+  }
+
+  const verifyPredictionPairs = async () => {
+    const storedPredictions = await selectAll('predictions', 'id');
+    return new Set(storedPredictions.map((row) => `${row.participant_id}|${row.match_id}`));
+  };
+
+  onProgress('Verificando predicciones guardadas...');
+  let storedPredictionPairs = await verifyPredictionPairs();
+  let missingPredictionRows = predictionRows.filter((item) => !storedPredictionPairs.has(item.key));
+  summary.predictionsStored = predictionRows.length - missingPredictionRows.length;
+  summary.predictionsMissing = missingPredictionRows.length;
+
+  if (missingPredictionRows.length) {
+    let repairedCount = 0;
+    onProgress(`Reintentando predicciones faltantes (0/${missingPredictionRows.length})...`);
+    for (const chunk of chunkRows(missingPredictionRows, 50)) {
+      try {
+        await upsertRows('predictions', chunk.map((item) => item.row));
+        repairedCount += chunk.length;
+        const created = chunk.filter((item) => item.action === 'created').length;
+        const updated = chunk.filter((item) => item.action === 'updated').length;
+        summary.predictionsCreated += created;
+        summary.predictionsUpdated += updated;
+        summary.predictionRepairCreated += created;
+        summary.predictionRepairUpdated += updated;
+        onProgress(`Reintentando predicciones faltantes (${Math.min(repairedCount, missingPredictionRows.length)}/${missingPredictionRows.length})...`);
+      } catch (error) {
+        for (const item of chunk) {
+          try {
+            await upsertRows('predictions', [item.row]);
+            repairedCount += 1;
+            if (item.action === 'created') {
+              summary.predictionsCreated += 1;
+              summary.predictionRepairCreated += 1;
+            } else {
+              summary.predictionsUpdated += 1;
+              summary.predictionRepairUpdated += 1;
+            }
+          } catch (singleError) {
+            summary.errors.push(`Predicción faltante ${item.key}: ${singleError.message}`);
+          }
+        }
+        onProgress(`Reintentando predicciones faltantes (${Math.min(repairedCount, missingPredictionRows.length)}/${missingPredictionRows.length})...`);
+      }
+    }
+
+    storedPredictionPairs = await verifyPredictionPairs();
+    missingPredictionRows = predictionRows.filter((item) => !storedPredictionPairs.has(item.key));
+    summary.predictionsStored = predictionRows.length - missingPredictionRows.length;
+    summary.predictionsMissing = missingPredictionRows.length;
   }
 
   onProgress(`Migrando pagos (0/${participants.length})...`);
