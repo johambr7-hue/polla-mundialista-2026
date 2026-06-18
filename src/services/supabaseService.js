@@ -313,7 +313,7 @@ export const saveMatch = async (match) => {
   return matchFromRow(row);
 };
 export const saveMatches = async (matches) =>
-  (await replaceRows('matches', matches, matchToRow)).map(matchFromRow);
+  (await upsertRows('matches', matches.map(matchToRow))).map(matchFromRow);
 
 export const getPredictions = async () => (await selectAll('predictions', 'id')).map(predictionFromRow);
 export const savePrediction = async (prediction) => {
@@ -583,10 +583,27 @@ export const migrateInitialDataToSupabase = async (sourceState, onProgress = () 
         continue;
       }
 
+      const existingMatch = matchesByCode.get(matchCode);
+      const row = matchToRow({ ...match, matchCode });
+      const preserveExistingResult =
+        existingMatch &&
+        (existingMatch.real_home_goals !== null ||
+          existingMatch.real_away_goals !== null ||
+          existingMatch.real_qualified_team ||
+          existingMatch.status === 'jugado');
+
       const result = await upsertByExisting({
         table: 'matches',
-        existing: matchesByCode.get(matchCode),
-        row: matchToRow({ ...match, matchCode }),
+        existing: existingMatch,
+        row: preserveExistingResult
+          ? {
+              ...row,
+              real_home_goals: existingMatch.real_home_goals,
+              real_away_goals: existingMatch.real_away_goals,
+              real_qualified_team: existingMatch.real_qualified_team ?? '',
+              status: existingMatch.status ?? row.status
+            }
+          : row,
         fromRow: matchFromRow
       });
 
