@@ -37,6 +37,7 @@ function PredictionPanel({
   const [groupFilter, setGroupFilter] = useState('Todos los grupos');
   const participantId = isAdmin ? selectedParticipantId : currentParticipantId;
   const predictionsClosed = Boolean(settings.predictionsLocked) && !isAdmin;
+  const adminCanEditPlayedMatches = isAdmin && !settings.predictionsLocked;
   const participant = participants.find((item) => item.id === participantId);
   const sortedMatches = useMemo(
     () => [...matches].sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)),
@@ -66,7 +67,7 @@ function PredictionPanel({
   };
 
   const upsertPrediction = (match, field, value) => {
-    if (predictionsClosed || match.status === 'jugado') return;
+    if (predictionsClosed || (match.status === 'jugado' && !adminCanEditPlayedMatches)) return;
 
     const existing = predictions.find(
       (prediction) => prediction.matchId === match.id && prediction.participantId === participantId
@@ -122,7 +123,7 @@ function PredictionPanel({
     const prediction = predictions.find(
       (item) => item.matchId === match.id && item.participantId === participantId
     );
-    const locked = predictionsClosed || match.status === 'jugado';
+    const locked = predictionsClosed || (match.status === 'jugado' && !adminCanEditPlayedMatches);
     const points = calculatePredictionPoints(prediction, match, settings);
     const knockout = !isGroupStage(match.stage);
     const predictedTeams = {
@@ -217,6 +218,9 @@ function PredictionPanel({
             <Lock size={14} />{' '}
             {predictionsClosed ? 'Edición bloqueada porque los pronósticos están cerrados.' : 'Edición bloqueada porque el partido está jugado.'}
           </p>
+        )}
+        {adminCanEditPlayedMatches && match.status === 'jugado' && (
+          <p className="muted lock-note">Modo administrador: puedes corregir este pronóstico porque los pronósticos están abiertos.</p>
         )}
       </article>
     );

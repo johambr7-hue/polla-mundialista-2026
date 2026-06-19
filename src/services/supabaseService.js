@@ -346,8 +346,24 @@ export const savePayment = async (payment) => {
   const [row] = await upsertRows('payments', paymentToRow(payment));
   return paymentFromRow(row);
 };
-export const savePayments = async (payments) =>
-  (await replaceRows('payments', payments.filter(hasParticipantUuid), paymentToRow, 'participant_id')).map(paymentFromRow);
+export const savePayments = async (payments) => {
+  const payload = payments.filter(hasParticipantUuid).map(paymentToRow);
+  if (!payload.length) return [];
+
+  const saved = [];
+  const existingPayments = await selectAll('payments', 'participant_id');
+  const paymentsByParticipant = new Map(existingPayments.map((payment) => [payment.participant_id, payment]));
+
+  for (const row of payload) {
+    const existing = paymentsByParticipant.get(row.participant_id);
+    const savedRow = existing?.id
+      ? await updateRow('payments', existing.id, row)
+      : await insertRow('payments', row);
+    saved.push(savedRow);
+  }
+
+  return saved.map(paymentFromRow);
+};
 
 export const getSettings = async () => normalizeSettings(await selectAll('settings', 'key'));
 export const saveSettings = async (settings) => {
@@ -390,12 +406,7 @@ export const loadSupabaseState = async () => {
     getScoreDetails()
   ]);
 
-  const participantsWithPayments = participants.map((participant) => {
-    const payment = payments.find((item) => item.participantId === participant.id);
-    return payment
-      ? { ...participant, paid: payment.paid, paymentMethod: payment.paymentMethod }
-      : participant;
-  });
+  const participantsWithPayments = participants.map((participant) => participant);
   const finalPredictions = Object.fromEntries(
     Object.entries(tournamentEntries).map(([participantId, entry]) => [
       participantId,
