@@ -897,14 +897,46 @@ function AdminPanel({
 
       {activeAdminTab === 'dashboard' && (
       <>
-      <div className="dashboard-grid">
-        <div className="panel">
+      <div className="panel admin-dashboard-hero">
+        <div>
+          <span className="eyebrow">Centro de control</span>
+          <h3>Resumen administrativo</h3>
+          <p className="muted">Lo más importante de la polla en una vista rápida, sin listas interminables.</p>
+        </div>
+        <div className="admin-dashboard-kpis">
+          <article>
+            <span>Pendientes</span>
+            <strong>{pendingMatches.length}</strong>
+          </article>
+          <article>
+            <span>Finalizados</span>
+            <strong>{finishedMatches.length}</strong>
+          </article>
+          <article>
+            <span>Pollas completas</span>
+            <strong>{tournamentStatus.filter((item) => item.complete).length}/{participants.length}</strong>
+          </article>
+          <article>
+            <span>Líder</span>
+            <strong>{leader ? `${leader.name} (${leader.totalPoints})` : 'Sin datos'}</strong>
+          </article>
+        </div>
+      </div>
+
+      <div className="admin-dashboard-grid">
+        <div className="panel admin-dashboard-card dashboard-card-wide">
           <div className="panel-heading">
-            <h3>Pendientes por fecha</h3>
+            <div>
+              <h3>Próximos pendientes</h3>
+              <p className="muted">Ordenados por fecha y hora.</p>
+            </div>
+            <button className="secondary-button compact" onClick={() => setActiveAdminTab('results')} type="button">
+              Ver resultados
+            </button>
           </div>
           <div className="pending-list">
             {pendingMatches.length ? (
-              pendingMatches.map((match) => (
+              pendingMatches.slice(0, 6).map((match) => (
                 <article key={match.id}>
                   <span>{match.date} · {match.time}</span>
                   <strong>{displayMatch(match)}</strong>
@@ -915,9 +947,12 @@ function AdminPanel({
               <p className="muted">No hay partidos pendientes.</p>
             )}
           </div>
+          {pendingMatches.length > 6 && (
+            <p className="dashboard-footnote">Mostrando 6 de {pendingMatches.length}. Entra a Resultados para verlos todos.</p>
+          )}
         </div>
 
-        <div className="panel">
+        <div className="panel admin-dashboard-card">
           <div className="panel-heading">
             <h3>Top 5 participantes</h3>
           </div>
@@ -932,14 +967,35 @@ function AdminPanel({
           </div>
         </div>
 
-        <div className="panel">
+        <div className="panel admin-dashboard-card">
           <div className="panel-heading">
-            <h3>Recaudo y premios proyectados</h3>
+            <h3>Recaudo</h3>
           </div>
           <div className="money-list">
             <p><span>Recaudo total</span><strong>{formatCop(collection.collectedTotal)}</strong></p>
+            <p><span>Pagaron</span><strong>{collection.paidCount}/{participants.length}</strong></p>
             <p><span>Primer puesto</span><strong>{formatCop(prizes.firstPrize)}</strong></p>
             <p><span>Segundo puesto</span><strong>{formatCop(prizes.secondPrize)}</strong></p>
+          </div>
+        </div>
+
+        <div className="panel admin-dashboard-card">
+          <div className="panel-heading">
+            <h3>Estado de pollas</h3>
+          </div>
+          <div className="poll-status-list">
+            <article>
+              <span>Completas</span>
+              <strong>{tournamentStatus.filter((item) => item.complete).length}</strong>
+            </article>
+            <article>
+              <span>Incompletas</span>
+              <strong>{tournamentStatus.filter((item) => !item.complete).length}</strong>
+            </article>
+            <article>
+              <span>Fecha límite</span>
+              <strong>{settings.predictionDeadline || 'Sin definir'}</strong>
+            </article>
           </div>
         </div>
       </div>

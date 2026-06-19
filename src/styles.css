@@ -1665,6 +1665,80 @@ th {
   grid-template-columns: 1.2fr 1fr 1fr;
 }
 
+.admin-dashboard-hero {
+  align-items: center;
+  background:
+    linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(37, 99, 235, 0.9)),
+    radial-gradient(circle at top right, rgba(244, 197, 66, 0.28), transparent 34%);
+  border-color: rgba(244, 197, 66, 0.34);
+  color: #fff;
+  grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.2fr);
+}
+
+.admin-dashboard-hero h3,
+.admin-dashboard-hero .muted,
+.admin-dashboard-hero .eyebrow {
+  color: #fff;
+}
+
+.admin-dashboard-hero .muted {
+  color: #dbe6f6;
+}
+
+.admin-dashboard-kpis {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.admin-dashboard-kpis article {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+}
+
+.admin-dashboard-kpis span {
+  color: #dbe6f6;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.admin-dashboard-kpis strong {
+  color: #fff;
+  font-size: 1.15rem;
+  line-height: 1.15;
+}
+
+.admin-dashboard-grid {
+  align-items: start;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1.25fr) minmax(260px, 0.9fr);
+}
+
+.admin-dashboard-card {
+  align-self: start;
+}
+
+.dashboard-card-wide {
+  grid-row: span 2;
+}
+
+.dashboard-footnote {
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  color: #64748b;
+  font-size: 0.86rem;
+  font-weight: 800;
+  margin: 0;
+  padding: 10px 12px;
+}
+
 .prize-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -1688,7 +1762,8 @@ th {
 
 .top-five-list,
 .pending-list,
-.money-list {
+.money-list,
+.poll-status-list {
   display: grid;
   gap: 10px;
 }
@@ -1741,6 +1816,33 @@ th {
 
 .money-list p:last-child {
   border-bottom: 0;
+}
+
+.poll-status-list article {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e5e9f1;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  padding: 12px;
+}
+
+.poll-status-list span {
+  color: #64748b;
+  font-weight: 800;
+}
+
+.poll-status-list strong {
+  color: #172033;
+  font-size: 1.05rem;
+  text-align: right;
+}
+
+.pending-list {
+  max-height: 540px;
+  overflow: auto;
+  padding-right: 3px;
 }
 
 .score-edit {
@@ -2546,9 +2648,19 @@ th {
   }
 
   .participant-hero,
+  .admin-dashboard-hero,
+  .admin-dashboard-grid,
   .participants-list-grid,
   .ranking-spotlight-grid {
     grid-template-columns: 1fr;
+  }
+
+  .dashboard-card-wide {
+    grid-row: auto;
+  }
+
+  .admin-dashboard-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .participant-hero-stats {
@@ -2614,6 +2726,10 @@ th {
 
   .world-dashboard-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-dashboard-kpis {
+    grid-template-columns: 1fr;
   }
 
   .charts-layout .chart-panel:not(.full-span) {
