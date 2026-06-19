@@ -15,8 +15,7 @@ function ParticipantSelector({ participants, value, onChange }) {
   const filteredParticipants = useMemo(() => {
     const normalizedQuery = normalizeText(query);
     return participants
-      .filter((participant) => !normalizedQuery || normalizeText(participant.name).includes(normalizedQuery))
-      .slice(0, 8);
+      .filter((participant) => !normalizedQuery || normalizeText(participant.name).includes(normalizedQuery));
   }, [participants, query]);
 
   const chooseParticipant = (participantId) => {
