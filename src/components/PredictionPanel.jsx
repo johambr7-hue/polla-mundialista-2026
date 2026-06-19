@@ -354,7 +354,7 @@ function PredictionPanel({
         </div>
 
         <div className="participant-hero">
-          <Avatar name={participant?.name} size="lg" />
+          <Avatar name={participant?.name} size="lg" variant="ball" />
           <div>
             <strong>{participant?.name ?? 'Participante'}</strong>
             <span>#{participantStanding?.position ?? '-'} del torneo</span>
