@@ -1019,6 +1019,10 @@ th {
   color: #172033;
 }
 
+.ranking-mobile-list {
+  display: none;
+}
+
 @keyframes rankingRowIn {
   from {
     opacity: 0.72;
@@ -1028,6 +1032,192 @@ th {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .podium-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ranking-table-wrap {
+    display: none;
+  }
+
+  .ranking-mobile-list {
+    display: grid;
+    gap: 12px;
+  }
+
+  .ranking-mobile-card {
+    animation: rankingRowIn 220ms ease both;
+    background: #ffffff;
+    border: 1px solid #e5e9f1;
+    border-radius: 8px;
+    box-shadow: 0 10px 24px rgba(16, 24, 40, 0.06);
+    display: grid;
+    gap: 14px;
+    padding: 14px;
+    transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+  }
+
+  .ranking-mobile-card:hover {
+    border-color: #bfdbfe;
+    box-shadow: 0 14px 30px rgba(37, 99, 235, 0.12);
+    transform: translateY(-1px);
+  }
+
+  .ranking-mobile-card.gold {
+    background: linear-gradient(135deg, #fff8dc, #fffdf4);
+    border-color: #fde68a;
+  }
+
+  .ranking-mobile-card.silver {
+    background: linear-gradient(135deg, #f4f7fb, #ffffff);
+    border-color: #d7deea;
+  }
+
+  .ranking-mobile-card.bronze {
+    background: linear-gradient(135deg, #fff0df, #fffaf5);
+    border-color: #fed7aa;
+  }
+
+  .mobile-rank-header {
+    align-items: center;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .mobile-rank-position {
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid #e5e9f1;
+    border-radius: 999px;
+    color: #172033;
+    display: inline-flex;
+    font-size: 1.12rem;
+    font-weight: 900;
+    height: 44px;
+    justify-content: center;
+    min-width: 44px;
+    padding: 0 12px;
+  }
+
+  .mobile-rank-name {
+    display: grid;
+    gap: 7px;
+    min-width: 0;
+  }
+
+  .mobile-rank-name strong {
+    color: #172033;
+    font-size: 1.18rem;
+    line-height: 1.08;
+    overflow-wrap: anywhere;
+  }
+
+  .mobile-rank-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .mobile-rank-stats {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .mobile-rank-stats article {
+    background: rgba(248, 250, 252, 0.86);
+    border: 1px solid #e5e9f1;
+    border-radius: 8px;
+    display: grid;
+    gap: 5px;
+    padding: 10px;
+  }
+
+  .mobile-rank-stats span {
+    color: #64748b;
+    font-size: 0.72rem;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+
+  .mobile-rank-stats strong {
+    color: #172033;
+    font-size: 1.35rem;
+    line-height: 1;
+  }
+
+  .mobile-rank-stats strong.leader {
+    color: #047857;
+  }
+
+  .mobile-rank-details {
+    border-top: 1px solid #e5e9f1;
+    padding-top: 2px;
+  }
+
+  .mobile-rank-details summary {
+    align-items: center;
+    color: #1d4ed8;
+    cursor: pointer;
+    display: flex;
+    font-weight: 900;
+    justify-content: space-between;
+    list-style: none;
+    padding: 8px 0 0;
+  }
+
+  .mobile-rank-details summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .mobile-rank-details summary::after {
+    align-items: center;
+    background: #eff6ff;
+    border-radius: 999px;
+    content: "+";
+    display: inline-flex;
+    height: 26px;
+    justify-content: center;
+    width: 26px;
+  }
+
+  .mobile-rank-details[open] summary::after {
+    content: "-";
+  }
+
+  .mobile-rank-details div {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 10px;
+  }
+
+  .mobile-rank-details span {
+    background: #ffffff;
+    border: 1px solid #e5e9f1;
+    border-radius: 8px;
+    color: #475569;
+    display: grid;
+    font-size: 0.78rem;
+    font-weight: 800;
+    gap: 4px;
+    padding: 9px;
+  }
+
+  .mobile-rank-details strong {
+    color: #172033;
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .mobile-rank-details div {
+    grid-template-columns: 1fr;
   }
 }
 

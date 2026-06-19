@@ -14,6 +14,15 @@ const getTrend = (participant) => {
   return '➡️';
 };
 
+const getRankingMeta = (participant, index, leaderPoints) => {
+  const podiumItem = podiumConfig[index];
+  const difference = participant.totalPoints - leaderPoints;
+  const isLeader = participant.position === 1;
+  const inTheFight = !isLeader && leaderPoints - participant.totalPoints > 0 && leaderPoints - participant.totalPoints < 20;
+
+  return { podiumItem, difference, isLeader, inTheFight };
+};
+
 function RankingTable({ collection, onViewCharts, prizes, ranking }) {
   const leaderPoints = ranking[0]?.totalPoints ?? 0;
   const podium = ranking.slice(0, 3);
@@ -69,7 +78,7 @@ function RankingTable({ collection, onViewCharts, prizes, ranking }) {
           </div>
         </div>
 
-        <div className="table-wrap">
+        <div className="table-wrap ranking-table-wrap">
           <table className="ranking-table">
             <thead>
               <tr>
@@ -85,10 +94,7 @@ function RankingTable({ collection, onViewCharts, prizes, ranking }) {
             </thead>
             <tbody>
               {ranking.map((participant, index) => {
-                const podiumItem = podiumConfig[index];
-                const difference = participant.totalPoints - leaderPoints;
-                const isLeader = participant.position === 1;
-                const inTheFight = !isLeader && leaderPoints - participant.totalPoints > 0 && leaderPoints - participant.totalPoints < 20;
+                const { podiumItem, difference, isLeader, inTheFight } = getRankingMeta(participant, index, leaderPoints);
 
                 return (
                   <tr className={podiumItem ? `podium-row ${podiumItem.className}` : ''} key={participant.id}>
@@ -120,6 +126,55 @@ function RankingTable({ collection, onViewCharts, prizes, ranking }) {
               })}
             </tbody>
           </table>
+        </div>
+
+        <div className="ranking-mobile-list">
+          {ranking.map((participant, index) => {
+            const { podiumItem, difference, isLeader, inTheFight } = getRankingMeta(participant, index, leaderPoints);
+
+            return (
+              <article className={podiumItem ? `ranking-mobile-card ${podiumItem.className}` : 'ranking-mobile-card'} key={participant.id}>
+                <div className="mobile-rank-header">
+                  <span className="mobile-rank-position">
+                    {podiumItem ? podiumItem.medal : participant.position}
+                  </span>
+                  <div className="mobile-rank-name">
+                    <strong>{participant.name}</strong>
+                    <div className="mobile-rank-badges">
+                      {isLeader && <span className="rank-badge leader-badge">👑 Líder</span>}
+                      {inTheFight && <span className="rank-badge fight-badge">🔥 En la pelea</span>}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mobile-rank-stats">
+                  <article>
+                    <span>Puntos</span>
+                    <strong>{participant.totalPoints}</strong>
+                  </article>
+                  <article>
+                    <span>Diferencia</span>
+                    <strong className={difference === 0 ? 'leader' : ''}>{difference}</strong>
+                  </article>
+                  <article>
+                    <span>Exactos</span>
+                    <strong>{participant.exactScores}</strong>
+                  </article>
+                </div>
+
+                <details className="mobile-rank-details">
+                  <summary>Ver detalles</summary>
+                  <div>
+                    <span><strong>{participant.groupPoints}</strong> Fase grupos</span>
+                    <span><strong>{participant.knockoutPoints}</strong> Eliminatorias</span>
+                    <span><strong>{participant.finalPoints}</strong> Resultados finales</span>
+                    <span><strong>{participant.bracketHits}</strong> Llaves acertadas</span>
+                    <span><strong>{participant.qualifiedTeamHits}</strong> Equipos clasificados</span>
+                  </div>
+                </details>
+              </article>
+            );
+          })}
         </div>
       </div>
 
