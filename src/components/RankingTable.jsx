@@ -249,6 +249,8 @@ function RankingTable({ collection, matches = [], onViewCharts, prizes, ranking 
             const { podiumItem, difference, isLeader, inTheFight } = getRankingMeta(participant, index, leaderPoints);
             const trend = getTrend(participant);
             const exactLeader = maxExactScores > 0 && participant.exactScores === maxExactScores;
+            const exactDetails = getExactScoreDetails(participant);
+            const exactExpanded = openExactParticipantId === participant.id;
 
             return (
               <article className={podiumItem ? `ranking-mobile-card ${podiumItem.className}` : 'ranking-mobile-card'} key={participant.id}>
@@ -277,11 +279,23 @@ function RankingTable({ collection, matches = [], onViewCharts, prizes, ranking 
                     <span>Diferencia</span>
                     <strong className={getDifferenceClass(difference)}>{difference}</strong>
                   </article>
-                  <article>
+                  <button
+                    aria-expanded={exactExpanded}
+                    className="mobile-rank-stat mobile-exacts-button"
+                    onClick={() => setOpenExactParticipantId((current) => (current === participant.id ? '' : participant.id))}
+                    title={`Ver marcadores exactos de ${participant.name}`}
+                    type="button"
+                  >
                     <span>Exactos</span>
                     <strong>{participant.exactScores}</strong>
-                  </article>
+                  </button>
                 </div>
+
+                {exactExpanded && (
+                  <div className="mobile-exact-details">
+                    <ExactHitList details={exactDetails} />
+                  </div>
+                )}
 
                 <details className="mobile-rank-details">
                   <summary>Ver detalles</summary>
