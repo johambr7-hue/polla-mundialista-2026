@@ -1,5 +1,6 @@
 import { BarChart3 } from 'lucide-react';
 import { formatCop } from '../utils/formatters';
+import { PointsBar } from './ui';
 
 const podiumConfig = [
   { medal: '🥇', label: 'Primer lugar', className: 'gold' },
@@ -23,9 +24,38 @@ const getRankingMeta = (participant, index, leaderPoints) => {
   return { podiumItem, difference, isLeader, inTheFight };
 };
 
-function RankingTable({ collection, onViewCharts, prizes, ranking }) {
+const getDifferenceClass = (difference) => {
+  const gap = Math.abs(difference);
+  if (difference === 0) return 'leader';
+  if (gap <= 10) return 'near';
+  if (gap <= 20) return 'fight';
+  return 'far';
+};
+
+function RankingTable({ collection, matches = [], onViewCharts, prizes, ranking }) {
   const leaderPoints = ranking[0]?.totalPoints ?? 0;
   const podium = ranking.slice(0, 3);
+  const maxPoints = Math.max(...ranking.map((participant) => participant.totalPoints), 1);
+  const maxExactScores = Math.max(...ranking.map((participant) => participant.exactScores), 0);
+  const mostExact = ranking.find((participant) => participant.exactScores === maxExactScores && participant.exactScores > 0);
+  const pendingMatches = matches.filter((match) => match.status !== 'jugado').length;
+  const featuredParticipant = mostExact ?? ranking[0];
+  const probabilityScores = ranking.map((participant) => {
+    const gap = Math.max(leaderPoints - participant.totalPoints, 0);
+    return {
+      ...participant,
+      probabilityWeight: Math.max(8, participant.totalPoints + pendingMatches * 1.4 - gap * 0.8 + participant.exactScores * 6)
+    };
+  });
+  const totalProbabilityWeight = probabilityScores.reduce((sum, item) => sum + item.probabilityWeight, 0) || 1;
+  const championProbability = probabilityScores.slice(0, 3).map((participant) => ({
+    ...participant,
+    probability: Math.round((participant.probabilityWeight / totalProbabilityWeight) * 100)
+  }));
+  const otherProbability = Math.max(
+    0,
+    100 - championProbability.reduce((sum, participant) => sum + participant.probability, 0)
+  );
 
   return (
     <section className="stack-list">
@@ -78,6 +108,35 @@ function RankingTable({ collection, onViewCharts, prizes, ranking }) {
           </div>
         </div>
 
+        <div className="ranking-spotlight-grid">
+          <article className="spotlight-card">
+            <span>⭐ Participante destacado</span>
+            <strong>{featuredParticipant?.name ?? 'Sin datos'}</strong>
+            <p>
+              {featuredParticipant
+                ? `${featuredParticipant.exactScores} marcadores exactos y ${featuredParticipant.totalPoints} puntos`
+                : 'Aún no hay datos suficientes'}
+            </p>
+          </article>
+          <article className="spotlight-card champion-odds">
+            <span>🏆 Probabilidad de campeón</span>
+            <div>
+              {championProbability.map((participant) => (
+                <div className="odds-row" key={participant.id}>
+                  <strong>{participant.name}</strong>
+                  <PointsBar color="#F4C542" max={100} value={participant.probability} />
+                  <em>{participant.probability}%</em>
+                </div>
+              ))}
+              <div className="odds-row">
+                <strong>Otros</strong>
+                <PointsBar color="#C0C6D4" max={100} value={otherProbability} />
+                <em>{otherProbability}%</em>
+              </div>
+            </div>
+          </article>
+        </div>
+
         <div className="table-wrap ranking-table-wrap">
           <table className="ranking-table">
             <thead>
@@ -95,6 +154,8 @@ function RankingTable({ collection, onViewCharts, prizes, ranking }) {
             <tbody>
               {ranking.map((participant, index) => {
                 const { podiumItem, difference, isLeader, inTheFight } = getRankingMeta(participant, index, leaderPoints);
+                const trend = getTrend(participant);
+                const exactLeader = maxExactScores > 0 && participant.exactScores === maxExactScores;
 
                 return (
                   <tr className={podiumItem ? `podium-row ${podiumItem.className}` : ''} key={participant.id}>
@@ -106,11 +167,19 @@ function RankingTable({ collection, onViewCharts, prizes, ranking }) {
                         <strong>{participant.name}</strong>
                         {isLeader && <span className="rank-badge leader-badge">👑 Líder</span>}
                         {inTheFight && <span className="rank-badge fight-badge">🔥 En la pelea</span>}
+                        {exactLeader && <span className="rank-badge exact-badge">🎯 Más exactos</span>}
+                        {trend === '⬆️' && <span className="rank-badge up-badge">📈 Remontando</span>}
+                        {trend === '⬇️' && <span className="rank-badge down-badge">📉 En descenso</span>}
                       </div>
                     </td>
-                    <td className="trend-cell">{getTrend(participant)}</td>
-                    <td>{participant.totalPoints}</td>
-                    <td className={difference === 0 ? 'difference-cell leader' : 'difference-cell'}>{difference}</td>
+                    <td className="trend-cell">{trend}</td>
+                    <td>
+                      <div className="rank-points-cell">
+                        <strong>{participant.totalPoints}</strong>
+                        <PointsBar color="#2563eb" max={maxPoints} value={participant.totalPoints} />
+                      </div>
+                    </td>
+                    <td className={`difference-cell ${getDifferenceClass(difference)}`}>{difference}</td>
                     <td>{participant.groupPoints}</td>
                     <td>{participant.exactScores}</td>
                     <td>
@@ -131,6 +200,8 @@ function RankingTable({ collection, onViewCharts, prizes, ranking }) {
         <div className="ranking-mobile-list">
           {ranking.map((participant, index) => {
             const { podiumItem, difference, isLeader, inTheFight } = getRankingMeta(participant, index, leaderPoints);
+            const trend = getTrend(participant);
+            const exactLeader = maxExactScores > 0 && participant.exactScores === maxExactScores;
 
             return (
               <article className={podiumItem ? `ranking-mobile-card ${podiumItem.className}` : 'ranking-mobile-card'} key={participant.id}>
@@ -143,6 +214,9 @@ function RankingTable({ collection, onViewCharts, prizes, ranking }) {
                     <div className="mobile-rank-badges">
                       {isLeader && <span className="rank-badge leader-badge">👑 Líder</span>}
                       {inTheFight && <span className="rank-badge fight-badge">🔥 En la pelea</span>}
+                      {exactLeader && <span className="rank-badge exact-badge">🎯 Más exactos</span>}
+                      {trend === '⬆️' && <span className="rank-badge up-badge">📈 Remontando</span>}
+                      {trend === '⬇️' && <span className="rank-badge down-badge">📉 En descenso</span>}
                     </div>
                   </div>
                 </div>
@@ -154,7 +228,7 @@ function RankingTable({ collection, onViewCharts, prizes, ranking }) {
                   </article>
                   <article>
                     <span>Diferencia</span>
-                    <strong className={difference === 0 ? 'leader' : ''}>{difference}</strong>
+                    <strong className={getDifferenceClass(difference)}>{difference}</strong>
                   </article>
                   <article>
                     <span>Exactos</span>
@@ -165,6 +239,7 @@ function RankingTable({ collection, onViewCharts, prizes, ranking }) {
                 <details className="mobile-rank-details">
                   <summary>Ver detalles</summary>
                   <div>
+                    <span><strong>{trend}</strong> Tendencia</span>
                     <span><strong>{participant.groupPoints}</strong> Fase grupos</span>
                     <span><strong>{participant.knockoutPoints}</strong> Eliminatorias</span>
                     <span><strong>{participant.finalPoints}</strong> Resultados finales</span>

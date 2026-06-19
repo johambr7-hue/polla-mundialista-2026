@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Edit2, Plus, Save, Trash2, X } from 'lucide-react';
+import { Avatar, SportBadge } from './ui';
 
 const emptyForm = { name: '', email: '', phone: '', paid: false, paymentMethod: '' };
 
@@ -136,14 +137,15 @@ function ParticipantPanel({ deleteParticipant, isAdmin, participants, updatePart
         </div>
         <div className="stack-list">
           {participants.map((participant) => (
-            <article className="list-item" key={participant.id ?? participant.name}>
+            <article className="list-item participant-card" key={participant.id ?? participant.name}>
+              <Avatar name={participant.name} />
               <div>
                 <strong>{participant.name}</strong>
                 <span>{participant.email || 'Sin correo'}</span>
                 <span>{participant.phone || 'Sin telefono'}</span>
-                <span className={participant.paid ? 'payment-ok' : 'payment-pending'}>
-                  {participant.paid ? `Pagado por ${participant.paymentMethod || 'medio sin definir'}` : 'Pago pendiente'}
-                </span>
+                <SportBadge tone={participant.paid ? 'green' : 'warning'}>
+                  {participant.paid ? `🟢 Pagado · ${participant.paymentMethod || 'medio sin definir'}` : '🟡 Pendiente'}
+                </SportBadge>
               </div>
               <div className="row-actions">
                 <button

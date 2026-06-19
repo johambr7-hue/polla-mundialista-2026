@@ -1,7 +1,15 @@
 import { useMemo, useState } from 'react';
-import { displayTeam } from '../utils/localization';
+import { displayMatch, displayTeam } from '../utils/localization';
+
+const normalizeSearch = (value) =>
+  String(value ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
 
 function SearchPanel({ matches, participants, predictions }) {
+  const [globalQuery, setGlobalQuery] = useState('');
   const [participantQuery, setParticipantQuery] = useState('');
   const [selectedMatchId, setSelectedMatchId] = useState(matches[0]?.id ?? '');
   const [scoreQuery, setScoreQuery] = useState({ home: '', away: '' });
@@ -9,9 +17,48 @@ function SearchPanel({ matches, participants, predictions }) {
   const selectedMatch = matches.find((match) => match.id === selectedMatchId);
 
   const participantResults = useMemo(
-    () => participants.filter((participant) => participant.name.toLowerCase().includes(participantQuery.toLowerCase())),
+    () => participants.filter((participant) => normalizeSearch(participant.name).includes(normalizeSearch(participantQuery))),
     [participants, participantQuery]
   );
+
+  const smartResults = useMemo(() => {
+    const query = normalizeSearch(globalQuery);
+    if (!query) return [];
+
+    const participantMatches = participants
+      .filter((participant) => normalizeSearch(participant.name).includes(query))
+      .slice(0, 6)
+      .map((participant) => ({
+        id: `participant-${participant.id}`,
+        type: 'Participante',
+        title: participant.name,
+        description: participant.paid ? 'Pago confirmado' : 'Pago pendiente'
+      }));
+
+    const matchMatches = matches
+      .filter((match) => {
+        const text = normalizeSearch(`#${match.matchNumber} ${displayMatch(match)} ${match.stage} Grupo ${match.group}`);
+        return text.includes(query);
+      })
+      .slice(0, 8)
+      .map((match) => ({
+        id: `match-${match.id}`,
+        type: 'Partido',
+        title: displayMatch(match),
+        description: `#${match.matchNumber ?? '-'} · ${match.stage}${match.group ? ` · Grupo ${match.group}` : ''}`
+      }));
+
+    const groupMatches = [...new Set(matches.map((match) => match.group).filter(Boolean))]
+      .filter((group) => normalizeSearch(`Grupo ${group}`).includes(query))
+      .map((group) => ({
+        id: `group-${group}`,
+        type: 'Grupo',
+        title: `Grupo ${group}`,
+        description: `${matches.filter((match) => match.group === group).length} partidos`
+      }));
+
+    return [...participantMatches, ...matchMatches, ...groupMatches].slice(0, 14);
+  }, [globalQuery, matches, participants]);
 
   const matchPredictions = predictions
     .filter((prediction) => prediction.matchId === selectedMatchId)
@@ -29,6 +76,32 @@ function SearchPanel({ matches, participants, predictions }) {
 
   return (
     <section className="section-grid two-columns">
+      <div className="panel full-span smart-search-panel">
+        <div className="panel-heading">
+          <div>
+            <h3>Búsqueda inteligente</h3>
+            <p className="muted">Busca por participante, selección, partido o grupo.</p>
+          </div>
+        </div>
+        <input
+          onChange={(event) => setGlobalQuery(event.target.value)}
+          placeholder="Ej: Joham, Colombia, México, Grupo A, Brasil vs Marruecos"
+          value={globalQuery}
+        />
+        {globalQuery && (
+          <div className="smart-results-grid">
+            {smartResults.map((result) => (
+              <article className="smart-result-card" key={result.id}>
+                <span>{result.type}</span>
+                <strong>{result.title}</strong>
+                <p>{result.description}</p>
+              </article>
+            ))}
+            {!smartResults.length && <p className="muted">No encontré resultados con esa búsqueda.</p>}
+          </div>
+        )}
+      </div>
+
       <div className="panel">
         <div className="panel-heading">
           <h3>Buscar participante</h3>

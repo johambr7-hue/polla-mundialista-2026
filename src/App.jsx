@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import AdminPanel from './components/AdminPanel';
 import ChartsPanel from './components/ChartsPanel';
+import GlobalDashboard from './components/GlobalDashboard';
 import ImportCalendarPanel from './components/ImportCalendarPanel';
 import MatchPanel from './components/MatchPanel';
 import ParticipantPanel from './components/ParticipantPanel';
@@ -446,6 +447,15 @@ function App() {
           </div>
         </header>
 
+        {!isLoadingData && (
+          <GlobalDashboard
+            collection={collection}
+            matches={state.matches}
+            participants={state.participants}
+            ranking={ranking}
+          />
+        )}
+
         {isLoadingData && <div className="notice">Cargando datos desde Supabase...</div>}
         {connectionError && <div className="notice error-notice">{connectionError}</div>}
         {saveError && <div className="notice error-notice">{saveError}</div>}
@@ -456,6 +466,7 @@ function App() {
             onViewCharts={() => setActiveTab('graficas')}
             prizes={prizes}
             ranking={ranking}
+            matches={state.matches}
           />
         )}
         {activeTab === 'polla' && (
@@ -477,6 +488,7 @@ function App() {
             matches={state.matches}
             participants={state.participants}
             predictions={state.predictions}
+            ranking={ranking}
             settings={state.settings}
             updateFinalPredictions={updateFinalPredictions}
             updatePredictions={(predictions) => updateState({ predictions })}

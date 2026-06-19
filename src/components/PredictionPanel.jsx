@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Lock, Save } from 'lucide-react';
+import { Avatar, SportBadge } from './ui';
 import {
   calculatePredictionBreakdown,
   calculatePredictionPoints,
@@ -27,6 +28,60 @@ const normalizeSearch = (value) =>
     .replace(/[\u0300-\u036f]/g, '')
     .trim();
 
+const teamFlags = {
+  mexico: '🇲🇽',
+  'corea del sur': '🇰🇷',
+  'republica checa': '🇨🇿',
+  sudafrica: '🇿🇦',
+  canada: '🇨🇦',
+  suiza: '🇨🇭',
+  catar: '🇶🇦',
+  'bosnia y herzegovina': '🇧🇦',
+  brasil: '🇧🇷',
+  marruecos: '🇲🇦',
+  haiti: '🇭🇹',
+  escocia: '🏴',
+  'estados unidos': '🇺🇸',
+  paraguay: '🇵🇾',
+  australia: '🇦🇺',
+  turquia: '🇹🇷',
+  alemania: '🇩🇪',
+  curazao: '🇨🇼',
+  'costa de marfil': '🇨🇮',
+  ecuador: '🇪🇨',
+  'paises bajos': '🇳🇱',
+  japon: '🇯🇵',
+  suecia: '🇸🇪',
+  tunez: '🇹🇳',
+  belgica: '🇧🇪',
+  egipto: '🇪🇬',
+  iran: '🇮🇷',
+  'nueva zelanda': '🇳🇿',
+  espana: '🇪🇸',
+  'cabo verde': '🇨🇻',
+  'arabia saudita': '🇸🇦',
+  uruguay: '🇺🇾',
+  francia: '🇫🇷',
+  senegal: '🇸🇳',
+  noruega: '🇳🇴',
+  irak: '🇮🇶',
+  argentina: '🇦🇷',
+  argelia: '🇩🇿',
+  austria: '🇦🇹',
+  jordania: '🇯🇴',
+  colombia: '🇨🇴',
+  portugal: '🇵🇹',
+  'rd congo': '🇨🇩',
+  uzbekistan: '🇺🇿',
+  inglaterra: '🏴',
+  croacia: '🇭🇷',
+  ghana: '🇬🇭',
+  panama: '🇵🇦'
+};
+
+const getTeamFlag = (team) => teamFlags[normalizeSearch(displayTeam(team) || team)] ?? '⚽';
+const formatScoreValue = (value) => (value === '' || value === undefined || value === null ? '-' : value);
+
 function PredictionPanel({
   currentParticipantId,
   finalPredictions,
@@ -34,6 +89,7 @@ function PredictionPanel({
   matches,
   participants,
   predictions,
+  ranking,
   settings,
   updateFinalPredictions,
   updatePredictions
@@ -46,6 +102,9 @@ function PredictionPanel({
   const predictionsClosed = Boolean(settings.predictionsLocked) && !isAdmin;
   const adminCanEditPlayedMatches = isAdmin && !settings.predictionsLocked;
   const participant = participants.find((item) => item.id === participantId);
+  const participantStanding = ranking?.find((item) => item.id === participantId);
+  const leaderPoints = ranking?.[0]?.totalPoints ?? 0;
+  const leaderGap = participantStanding ? Math.max(leaderPoints - participantStanding.totalPoints, 0) : 0;
   const sortedMatches = useMemo(
     () => [...matches].sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)),
     [matches]
@@ -132,6 +191,7 @@ function PredictionPanel({
     );
     const locked = predictionsClosed || (match.status === 'jugado' && !adminCanEditPlayedMatches);
     const points = calculatePredictionPoints(prediction, match, settings);
+    const isScorable = isMatchScorable(match);
     const knockout = !isGroupStage(match.stage);
     const predictedTeams = {
       home: prediction?.predictedHomeTeam || match.homeTeam,
@@ -140,18 +200,37 @@ function PredictionPanel({
     const predictedDraw = knockout && isPredictionDraw(prediction);
     const predictedQualifiedTeam = knockout ? getPredictedQualifiedTeam(prediction, match) : '';
     const needsPenaltyWinner = predictedDraw && !prediction?.penaltyWinner;
+    const stateClass = !isScorable ? 'pending' : points > 0 ? 'hit' : 'miss';
+    const stateLabel = !isScorable ? '🟡 Pendiente' : points > 0 ? '🟢 Acertado' : '🔴 Fallado';
+    const predictionScore = `${formatScoreValue(prediction?.homeScore)} - ${formatScoreValue(prediction?.awayScore)}`;
+    const realScore = `${formatScoreValue(match.realHomeScore)} - ${formatScoreValue(match.realAwayScore)}`;
 
     return (
-      <article className="match-card compact-card" key={match.id}>
+      <article className={`match-card compact-card sports-match-card ${stateClass}`} key={match.id}>
         <div className="match-meta">
           <span>#{match.matchNumber} · {match.stage === 'Fase de grupos' ? getMatchGroupLabel(match) : match.stage}</span>
           <span className={`status ${match.status}`}>{match.status}</span>
         </div>
-        <div className="score-line">
-          <strong>{displayTeam(knockout ? predictedTeams.home : match.homeTeam)}</strong>
-          <span>vs</span>
-          <strong>{displayTeam(knockout ? predictedTeams.away : match.awayTeam)}</strong>
+
+        <div className="sports-match-board">
+          <div className="team-block home">
+            <span>{getTeamFlag(knockout ? predictedTeams.home : match.homeTeam)}</span>
+            <strong>{displayTeam(knockout ? predictedTeams.home : match.homeTeam)}</strong>
+          </div>
+          <span className="vs-chip">VS</span>
+          <div className="team-block away">
+            <span>{getTeamFlag(knockout ? predictedTeams.away : match.awayTeam)}</span>
+            <strong>{displayTeam(knockout ? predictedTeams.away : match.awayTeam)}</strong>
+          </div>
         </div>
+
+        <div className="match-insight-row">
+          <span>Pronóstico <strong>{predictionScore}</strong></span>
+          <span>Real <strong>{realScore}</strong></span>
+          <span className={`prediction-state ${stateClass}`}>{stateLabel}</span>
+          <span className="points-chip">{points} pts</span>
+        </div>
+
         {knockout && (
           <div className="prediction-inputs">
             <label>
@@ -272,6 +351,20 @@ function PredictionPanel({
               ))}
             </select>
           )}
+        </div>
+
+        <div className="participant-hero">
+          <Avatar name={participant?.name} size="lg" />
+          <div>
+            <strong>{participant?.name ?? 'Participante'}</strong>
+            <span>#{participantStanding?.position ?? '-'} del torneo</span>
+          </div>
+          <div className="participant-hero-stats">
+            <SportBadge tone="blue">{participantSummary.points} puntos</SportBadge>
+            <SportBadge tone={leaderGap <= 20 ? 'gold' : 'neutral'}>🔥 A {leaderGap} puntos del líder</SportBadge>
+            <SportBadge tone="green">🎯 {participantSummary.exactScores} exactos</SportBadge>
+            <SportBadge tone="neutral">{participantSummary.resultHits} partidos acertados</SportBadge>
+          </div>
         </div>
 
         <div className="participant-summary">

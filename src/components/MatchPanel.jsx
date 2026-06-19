@@ -175,15 +175,20 @@ function MatchPanel({ isAdmin, matches, predictions, updateMatches, updatePredic
   };
 
   const renderMatchCard = (match) => (
-    <article className="match-card" key={match.id ?? `${match.matchNumber}-${match.date}-${match.homeTeam}-${match.awayTeam}`}>
+    <article className="match-card result-match-card" key={match.id ?? `${match.matchNumber}-${match.date}-${match.homeTeam}-${match.awayTeam}`}>
       <div className="match-meta">
         <span>{match.matchNumber ? `#${match.matchNumber} · ` : ''}{match.date} · {match.time}</span>
         <span>{match.group || match.stage}</span>
       </div>
-      <div className="score-line">
+      <div className="result-scoreboard">
         <strong>{displayTeam(match.homeTeam)}</strong>
         <span>{match.realHomeScore === '' ? '-' : match.realHomeScore} : {match.realAwayScore === '' ? '-' : match.realAwayScore}</span>
         <strong>{displayTeam(match.awayTeam)}</strong>
+      </div>
+      <div className="result-info-strip">
+        <span>📅 {match.date || 'Sin fecha'}</span>
+        <span>🏟️ {match.stadium || match.city || 'Sede por definir'}</span>
+        <span>🏁 {match.qualifiedTeam ? `Clasifica ${displayTeam(match.qualifiedTeam)}` : 'Sin clasificado'}</span>
       </div>
       <div className="quick-score-form">
         <label>
@@ -394,7 +399,10 @@ function MatchPanel({ isAdmin, matches, predictions, updateMatches, updatePredic
       {activeView === 'list' && (
       <div className="panel">
         <div className="panel-heading">
-          <h3>Calendario</h3>
+          <div>
+            <h3>Centro de resultados</h3>
+            <p className="muted">Ingresa marcadores reales, revisa estado y clasificados por fase.</p>
+          </div>
           <span className="counter">{filteredMatches.length}</span>
         </div>
         <div className="match-filters">
