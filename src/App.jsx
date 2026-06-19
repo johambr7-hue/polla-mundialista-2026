@@ -450,7 +450,14 @@ function App() {
         {connectionError && <div className="notice error-notice">{connectionError}</div>}
         {saveError && <div className="notice error-notice">{saveError}</div>}
 
-        {!isLoadingData && activeTab === 'ranking' && <RankingTable collection={collection} prizes={prizes} ranking={ranking} />}
+        {!isLoadingData && activeTab === 'ranking' && (
+          <RankingTable
+            collection={collection}
+            onViewCharts={() => setActiveTab('graficas')}
+            prizes={prizes}
+            ranking={ranking}
+          />
+        )}
         {activeTab === 'polla' && (
           <TournamentPredictionPanel
             currentParticipantId={currentParticipantId}

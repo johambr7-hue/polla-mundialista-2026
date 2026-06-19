@@ -1,3 +1,4 @@
+import { BarChart3 } from 'lucide-react';
 import { formatCop } from '../utils/formatters';
 
 const podiumConfig = [
@@ -13,7 +14,7 @@ const getTrend = (participant) => {
   return '➡️';
 };
 
-function RankingTable({ collection, prizes, ranking }) {
+function RankingTable({ collection, onViewCharts, prizes, ranking }) {
   const leaderPoints = ranking[0]?.totalPoints ?? 0;
   const podium = ranking.slice(0, 3);
 
@@ -44,6 +45,12 @@ function RankingTable({ collection, prizes, ranking }) {
             <h3>Tabla de posiciones</h3>
             <p className="muted">Incluye fase de grupos, eliminatorias y resultados finales del torneo.</p>
           </div>
+          {onViewCharts && (
+            <button className="secondary-button" onClick={onViewCharts} type="button">
+              <BarChart3 size={18} />
+              Ver gráficas
+            </button>
+          )}
         </div>
 
         <div className="podium-section">
@@ -72,11 +79,8 @@ function RankingTable({ collection, prizes, ranking }) {
                 <th>Puntos totales</th>
                 <th>Diferencia</th>
                 <th>Puntos fase de grupos</th>
-                <th>Puntos fases eliminatorias</th>
-                <th>Puntos resultados finales</th>
                 <th>Marcadores exactos</th>
-                <th>Llaves acertadas</th>
-                <th>Equipos clasificados acertados</th>
+                <th>Detalle</th>
               </tr>
             </thead>
             <tbody>
@@ -102,11 +106,15 @@ function RankingTable({ collection, prizes, ranking }) {
                     <td>{participant.totalPoints}</td>
                     <td className={difference === 0 ? 'difference-cell leader' : 'difference-cell'}>{difference}</td>
                     <td>{participant.groupPoints}</td>
-                    <td>{participant.knockoutPoints}</td>
-                    <td>{participant.finalPoints}</td>
                     <td>{participant.exactScores}</td>
-                    <td>{participant.bracketHits}</td>
-                    <td>{participant.qualifiedTeamHits}</td>
+                    <td>
+                      <div className="ranking-detail-grid">
+                        <span><strong>{participant.knockoutPoints}</strong> elim.</span>
+                        <span><strong>{participant.finalPoints}</strong> finales</span>
+                        <span><strong>{participant.bracketHits}</strong> llaves</span>
+                        <span><strong>{participant.qualifiedTeamHits}</strong> clasif.</span>
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
