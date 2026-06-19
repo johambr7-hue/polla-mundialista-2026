@@ -3,6 +3,12 @@ import { getPredictionDistribution } from '../utils/scoring';
 import { displayMatch } from '../utils/localization';
 
 const palette = ['#2563eb', '#16a34a', '#f59e0b', '#dc2626', '#7c3aed', '#0891b2'];
+const normalizeSearch = (value) =>
+  String(value ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
 
 function Bar({ label, value, max, color }) {
   const width = max ? Math.max((value / max) * 100, value > 0 ? 6 : 0) : 0;
@@ -38,11 +44,11 @@ function ChartsPanel({ matches, participants, predictions, ranking }) {
     [matchesWithPredictions]
   );
   const filteredMatches = useMemo(() => {
-    const query = matchSearch.trim().toLowerCase();
+    const query = normalizeSearch(matchSearch);
     return matchesWithPredictions.filter((item) => {
       const stageMatches = stageFilter === 'Todas las fases' || item.stage === stageFilter;
       const groupMatches = groupFilter === 'Todos los grupos' || `Grupo ${item.group}` === groupFilter;
-      const searchText = `#${item.matchNumber} ${displayMatch(item)} ${item.stage} Grupo ${item.group}`.toLowerCase();
+      const searchText = normalizeSearch(`#${item.matchNumber} ${displayMatch(item)} ${item.stage} Grupo ${item.group}`);
       return stageMatches && groupMatches && (!query || searchText.includes(query));
     });
   }, [groupFilter, matchSearch, matchesWithPredictions, stageFilter]);
