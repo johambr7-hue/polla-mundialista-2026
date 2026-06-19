@@ -358,6 +358,7 @@ function App() {
   };
 
   const ActiveIcon = tabs.find((tab) => tab.id === activeTab)?.icon ?? Trophy;
+  const showParticipantSelector = ['predicciones', 'polla'].includes(activeTab);
 
   return (
     <div className="app-shell">
@@ -431,11 +432,13 @@ function App() {
             </h2>
           </div>
           <div className="topbar-actions">
-            <ParticipantSelector
-              onChange={setCurrentParticipantId}
-              participants={state.participants}
-              value={currentParticipantId}
-            />
+            {showParticipantSelector && (
+              <ParticipantSelector
+                onChange={setCurrentParticipantId}
+                participants={state.participants}
+                value={currentParticipantId}
+              />
+            )}
             <button className="secondary-button" onClick={exportAll} type="button">
               <Download size={18} />
               CSV
