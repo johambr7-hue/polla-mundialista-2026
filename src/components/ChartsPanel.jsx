@@ -236,7 +236,20 @@ function ChartsPanel({ matches, participants, predictions, ranking }) {
 
               return (
                 <div className={isOfficialScore ? 'distribution-item official-score-item' : 'distribution-item'} key={item.score}>
-                  <div className="bar-row distribution-row">
+                  <div
+                    aria-expanded={expanded}
+                    className="bar-row distribution-row interactive"
+                    onClick={() => toggleScore(item.score)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        toggleScore(item.score);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    title={`Ver participantes con marcador ${item.score.replace('-', ' - ')}`}
+                  >
                     <span className="distribution-score">
                       {item.score.replace('-', ' - ')}
                       {isOfficialScore && <small>Resultado real</small>}
@@ -244,15 +257,9 @@ function ChartsPanel({ matches, participants, predictions, ranking }) {
                     <div className="bar-track">
                       <div className="bar-fill" style={{ width: `${width}%`, background: palette[(index + 4) % palette.length] }} />
                     </div>
-                    <button
-                      aria-expanded={expanded}
-                      className="count-button"
-                      onClick={() => toggleScore(item.score)}
-                      type="button"
-                      title={`Ver participantes con marcador ${item.score.replace('-', ' - ')}`}
-                    >
+                    <span className="count-button count-display">
                       {item.count}
-                    </button>
+                    </span>
                   </div>
                   {expanded && (
                     <div className="prediction-name-list">

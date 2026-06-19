@@ -1423,17 +1423,21 @@ th {
 }
 
 .count-button {
+  align-items: center;
   background: transparent;
   border: 0;
   border-radius: 8px;
   color: #172033;
+  display: inline-flex;
   font-weight: 900;
+  justify-content: center;
   min-height: 34px;
   padding: 0 8px;
 }
 
 .count-button:hover,
-.count-button[aria-expanded="true"] {
+.count-button[aria-expanded="true"],
+.distribution-row[aria-expanded="true"] .count-button {
   background: #eaf1ff;
   color: #1d4ed8;
 }
