@@ -35,24 +35,6 @@ function ChartsPanel({ matches, participants, predictions, ranking }) {
   const [groupFilter, setGroupFilter] = useState('Todos los grupos');
   const maxPoints = Math.max(...ranking.map((item) => item.totalPoints), 1);
   const maxExact = Math.max(...ranking.map((item) => item.exactScores), 1);
-  const leaderPoints = ranking[0]?.totalPoints ?? 0;
-  const maxGap = Math.max(...ranking.map((item) => Math.max(leaderPoints - item.totalPoints, 0)), 1);
-  const pointBuckets = useMemo(() => {
-    const buckets = [
-      { label: '0 - 49 pts', min: 0, max: 49, value: 0 },
-      { label: '50 - 99 pts', min: 50, max: 99, value: 0 },
-      { label: '100 - 149 pts', min: 100, max: 149, value: 0 },
-      { label: '150+ pts', min: 150, max: Infinity, value: 0 }
-    ];
-
-    ranking.forEach((participant) => {
-      const bucket = buckets.find((item) => participant.totalPoints >= item.min && participant.totalPoints <= item.max);
-      if (bucket) bucket.value += 1;
-    });
-
-    return buckets;
-  }, [ranking]);
-  const maxBucket = Math.max(...pointBuckets.map((bucket) => bucket.value), 1);
   const stageOptions = useMemo(
     () => ['Todas las fases', ...new Set(matchesWithPredictions.map((item) => item.stage).filter(Boolean))],
     [matchesWithPredictions]
@@ -104,7 +86,7 @@ function ChartsPanel({ matches, participants, predictions, ranking }) {
   };
 
   return (
-    <section className="section-grid">
+    <section className="section-grid charts-layout">
       <div className="panel chart-panel">
         <div className="panel-heading">
           <h3>Ranking de puntos</h3>
@@ -112,24 +94,6 @@ function ChartsPanel({ matches, participants, predictions, ranking }) {
         {ranking.map((participant, index) => (
           <Bar
             color={palette[index % palette.length]}
-            key={participant.id}
-            label={participant.name}
-            max={maxPoints}
-            value={participant.totalPoints}
-          />
-        ))}
-      </div>
-
-      <div className="panel chart-panel">
-        <div className="panel-heading">
-          <div>
-            <h3>Evolución de puntos</h3>
-            <p className="muted">Acumulado actual; listo para comparar jornadas.</p>
-          </div>
-        </div>
-        {ranking.slice(0, 8).map((participant, index) => (
-          <Bar
-            color={palette[(index + 5) % palette.length]}
             key={participant.id}
             label={participant.name}
             max={maxPoints}
@@ -149,90 +113,6 @@ function ChartsPanel({ matches, participants, predictions, ranking }) {
             label={participant.name}
             max={maxExact}
             value={participant.exactScores}
-          />
-        ))}
-      </div>
-
-      <div className="panel chart-panel">
-        <div className="panel-heading">
-          <h3>Top ganadores</h3>
-        </div>
-        {ranking.slice(0, 5).map((participant, index) => (
-          <Bar
-            color={palette[(index + 1) % palette.length]}
-            key={participant.id}
-            label={`#${participant.position} ${participant.name}`}
-            max={maxPoints}
-            value={participant.totalPoints}
-          />
-        ))}
-      </div>
-
-      <div className="panel chart-panel">
-        <div className="panel-heading">
-          <h3>Distribución de puntos</h3>
-        </div>
-        {pointBuckets.map((bucket, index) => (
-          <Bar
-            color={palette[(index + 3) % palette.length]}
-            key={bucket.label}
-            label={bucket.label}
-            max={maxBucket}
-            value={bucket.value}
-          />
-        ))}
-      </div>
-
-      <div className="panel chart-panel">
-        <div className="panel-heading">
-          <div>
-            <h3>Diferencia respecto al líder</h3>
-            <p className="muted">Vista actual mientras se acumula historial.</p>
-          </div>
-        </div>
-        {ranking.slice(0, 8).map((participant, index) => (
-          <Bar
-            color={index === 0 ? '#22C55E' : '#EF4444'}
-            key={participant.id}
-            label={participant.name}
-            max={maxGap}
-            value={Math.max(leaderPoints - participant.totalPoints, 0)}
-          />
-        ))}
-      </div>
-
-      <div className="panel chart-panel">
-        <div className="panel-heading">
-          <div>
-            <h3>Exactos acumulados</h3>
-            <p className="muted">Lectura acumulada del torneo.</p>
-          </div>
-        </div>
-        {ranking.slice(0, 8).map((participant, index) => (
-          <Bar
-            color={palette[(index + 4) % palette.length]}
-            key={participant.id}
-            label={participant.name}
-            max={maxExact}
-            value={participant.exactScores}
-          />
-        ))}
-      </div>
-
-      <div className="panel chart-panel">
-        <div className="panel-heading">
-          <div>
-            <h3>Evolución de posiciones</h3>
-            <p className="muted">Preparado para historial; hoy muestra la posición actual.</p>
-          </div>
-        </div>
-        {ranking.slice(0, 8).map((participant, index) => (
-          <Bar
-            color={palette[index % palette.length]}
-            key={participant.id}
-            label={participant.name}
-            max={ranking.length}
-            value={ranking.length - participant.position + 1}
           />
         ))}
       </div>

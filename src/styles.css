@@ -1249,6 +1249,23 @@ th {
   align-content: start;
 }
 
+.charts-layout {
+  align-items: start;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.charts-layout .chart-panel:not(.full-span) {
+  min-height: 420px;
+}
+
+.charts-layout .full-span {
+  grid-column: 1 / -1;
+}
+
+.charts-layout .chart-panel.full-span {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
 .chart-match-selector {
   min-width: min(360px, 100%);
 }
@@ -2397,6 +2414,10 @@ th {
 
   .world-dashboard-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .charts-layout .chart-panel:not(.full-span) {
+    min-height: auto;
   }
 
   .next-match-card {
