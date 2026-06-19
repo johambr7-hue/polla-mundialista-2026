@@ -28,6 +28,13 @@ const normalizeName = (value) =>
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/\s+/g, ' ');
 const getMatchCode = (match) => match.matchCode ?? match.match_code ?? `match-${match.matchNumber ?? match.id}`;
+const lateEntryExclusions = [
+  {
+    participantName: 'Nicolás Castañeda',
+    matchNumbers: new Set([1, 2]),
+    reason: 'Entró tarde a la polla; partido sin puntaje.'
+  }
+];
 
 const participantFromRow = (row) => ({
   id: row.id,
@@ -407,6 +414,26 @@ export const loadSupabaseState = async () => {
   ]);
 
   const participantsWithPayments = participants.map((participant) => participant);
+  const participantById = new Map(participantsWithPayments.map((participant) => [participant.id, participant]));
+  const matchById = new Map(matches.map((match) => [match.id, match]));
+  const predictionsWithExclusions = predictions.map((prediction) => {
+    const participant = participantById.get(prediction.participantId);
+    const match = matchById.get(prediction.matchId);
+    const exclusion = lateEntryExclusions.find(
+      (rule) =>
+        normalizeName(participant?.name) === normalizeName(rule.participantName) &&
+        rule.matchNumbers.has(Number(match?.matchNumber))
+    );
+
+    return exclusion
+      ? {
+          ...prediction,
+          excludedFromScoring: true,
+          exclusionReason: exclusion.reason,
+          pointsTotal: 0
+        }
+      : prediction;
+  });
   const finalPredictions = Object.fromEntries(
     Object.entries(tournamentEntries).map(([participantId, entry]) => [
       participantId,
@@ -422,7 +449,7 @@ export const loadSupabaseState = async () => {
   return {
     participants: participantsWithPayments,
     matches,
-    predictions,
+    predictions: predictionsWithExclusions,
     tournamentEntries,
     finalPredictions,
     finalResults: { champion: '', second: '', third: '', fourth: '' },
