@@ -10,7 +10,7 @@ export const getInitials = (name = '') =>
 export function Avatar({ name, size = 'md', variant = 'default' }) {
   return (
     <span className={`avatar avatar-${size} avatar-${variant}`} aria-hidden="true">
-      {getInitials(name)}
+      {variant === 'ball' ? null : getInitials(name)}
     </span>
   );
 }
