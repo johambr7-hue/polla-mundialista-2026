@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { getPredictionDistribution } from '../utils/scoring';
-import { displayMatch } from '../utils/localization';
+import { displayMatch, displayTeam } from '../utils/localization';
+import { getExactScoreDetails } from '../utils/exactScoreDetails';
 
 const palette = ['#2563eb', '#16a34a', '#f59e0b', '#dc2626', '#7c3aed', '#0891b2'];
 const normalizeSearch = (value) =>
@@ -10,15 +11,55 @@ const normalizeSearch = (value) =>
     .replace(/[\u0300-\u036f]/g, '')
     .trim();
 
-function Bar({ label, value, max, color }) {
-  const width = max ? Math.max((value / max) * 100, value > 0 ? 6 : 0) : 0;
+const formatScore = (score) => String(score || '-').replace('-', ' - ');
+
+function ExactHitList({ details }) {
   return (
-    <div className="bar-row">
-      <span>{label}</span>
-      <div className="bar-track">
-        <div className="bar-fill" style={{ width: `${width}%`, background: color }} />
+    <div className="exact-hit-list">
+      {details.length ? (
+        details.map((detail) => (
+          <article key={detail.id}>
+            <span>{detail.phase}</span>
+            <strong>
+              {displayTeam(detail.teams[0]) || 'Equipo 1'} {formatScore(detail.predictedScore)} {displayTeam(detail.teams[1]) || 'Equipo 2'}
+            </strong>
+            <em>Real: {formatScore(detail.realScore)} · {detail.points} pts</em>
+          </article>
+        ))
+      ) : (
+        <p className="muted">No tiene marcadores exactos todavía.</p>
+      )}
+    </div>
+  );
+}
+
+function Bar({ children, color, expanded = false, label, max, onClick, value }) {
+  const width = max ? Math.max((value / max) * 100, value > 0 ? 6 : 0) : 0;
+  const interactiveProps = onClick
+    ? {
+        'aria-expanded': expanded,
+        onClick,
+        onKeyDown: (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            onClick();
+          }
+        },
+        role: 'button',
+        tabIndex: 0
+      }
+    : {};
+
+  return (
+    <div className={expanded ? 'chart-bar-item expanded' : 'chart-bar-item'}>
+      <div className={onClick ? 'bar-row interactive' : 'bar-row'} {...interactiveProps}>
+        <span>{label}</span>
+        <div className="bar-track">
+          <div className="bar-fill" style={{ width: `${width}%`, background: color }} />
+        </div>
+        <strong>{value}</strong>
       </div>
-      <strong>{value}</strong>
+      {expanded && children}
     </div>
   );
 }
@@ -30,6 +71,7 @@ function ChartsPanel({ matches, participants, predictions, ranking }) {
   );
   const [selectedMatchId, setSelectedMatchId] = useState('');
   const [openScore, setOpenScore] = useState('');
+  const [openExactParticipantId, setOpenExactParticipantId] = useState('');
   const [matchSearch, setMatchSearch] = useState('');
   const [stageFilter, setStageFilter] = useState('Todas las fases');
   const [groupFilter, setGroupFilter] = useState('Todos los grupos');
@@ -106,15 +148,24 @@ function ChartsPanel({ matches, participants, predictions, ranking }) {
         <div className="panel-heading">
           <h3>Marcadores exactos</h3>
         </div>
-        {ranking.map((participant, index) => (
-          <Bar
-            color={palette[(index + 2) % palette.length]}
-            key={participant.id}
-            label={participant.name}
-            max={maxExact}
-            value={participant.exactScores}
-          />
-        ))}
+        {ranking.map((participant, index) => {
+          const exactDetails = getExactScoreDetails(participant);
+          const expanded = openExactParticipantId === participant.id;
+
+          return (
+            <Bar
+              color={palette[(index + 2) % palette.length]}
+              expanded={expanded}
+              key={participant.id}
+              label={participant.name}
+              max={maxExact}
+              onClick={() => setOpenExactParticipantId((current) => (current === participant.id ? '' : participant.id))}
+              value={participant.exactScores}
+            >
+              <ExactHitList details={exactDetails} />
+            </Bar>
+          );
+        })}
       </div>
 
       <div className="panel chart-panel full-span">

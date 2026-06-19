@@ -1,5 +1,8 @@
+import { Fragment, useState } from 'react';
 import { BarChart3 } from 'lucide-react';
 import { formatCop } from '../utils/formatters';
+import { displayTeam } from '../utils/localization';
+import { getExactScoreDetails } from '../utils/exactScoreDetails';
 import { PointsBar } from './ui';
 
 const podiumConfig = [
@@ -32,7 +35,30 @@ const getDifferenceClass = (difference) => {
   return 'far';
 };
 
+const formatScore = (score) => String(score || '-').replace('-', ' - ');
+
+function ExactHitList({ details }) {
+  return (
+    <div className="exact-hit-list">
+      {details.length ? (
+        details.map((detail) => (
+          <article key={detail.id}>
+            <span>{detail.phase}</span>
+            <strong>
+              {displayTeam(detail.teams[0]) || 'Equipo 1'} {formatScore(detail.predictedScore)} {displayTeam(detail.teams[1]) || 'Equipo 2'}
+            </strong>
+            <em>Real: {formatScore(detail.realScore)} · {detail.points} pts</em>
+          </article>
+        ))
+      ) : (
+        <p className="muted">No tiene marcadores exactos todavía.</p>
+      )}
+    </div>
+  );
+}
+
 function RankingTable({ collection, matches = [], onViewCharts, prizes, ranking }) {
+  const [openExactParticipantId, setOpenExactParticipantId] = useState('');
   const leaderPoints = ranking[0]?.totalPoints ?? 0;
   const podium = ranking.slice(0, 3);
   const maxPoints = Math.max(...ranking.map((participant) => participant.totalPoints), 1);
@@ -156,41 +182,62 @@ function RankingTable({ collection, matches = [], onViewCharts, prizes, ranking 
                 const { podiumItem, difference, isLeader, inTheFight } = getRankingMeta(participant, index, leaderPoints);
                 const trend = getTrend(participant);
                 const exactLeader = maxExactScores > 0 && participant.exactScores === maxExactScores;
+                const exactDetails = getExactScoreDetails(participant);
+                const exactExpanded = openExactParticipantId === participant.id;
 
                 return (
-                  <tr className={podiumItem ? `podium-row ${podiumItem.className}` : ''} key={participant.id}>
-                    <td className="position-cell">
-                      {podiumItem ? <span className="position-medal">{podiumItem.medal}</span> : participant.position}
-                    </td>
-                    <td>
-                      <div className="ranking-name">
-                        <strong>{participant.name}</strong>
-                        {isLeader && <span className="rank-badge leader-badge">👑 Líder</span>}
-                        {inTheFight && <span className="rank-badge fight-badge">🔥 En la pelea</span>}
-                        {exactLeader && <span className="rank-badge exact-badge">🎯 Más exactos</span>}
-                        {trend === '⬆️' && <span className="rank-badge up-badge">📈 Remontando</span>}
-                        {trend === '⬇️' && <span className="rank-badge down-badge">📉 En descenso</span>}
-                      </div>
-                    </td>
-                    <td className="trend-cell">{trend}</td>
-                    <td>
-                      <div className="rank-points-cell">
-                        <strong>{participant.totalPoints}</strong>
-                        <PointsBar color="#2563eb" max={maxPoints} value={participant.totalPoints} />
-                      </div>
-                    </td>
-                    <td className={`difference-cell ${getDifferenceClass(difference)}`}>{difference}</td>
-                    <td>{participant.groupPoints}</td>
-                    <td>{participant.exactScores}</td>
-                    <td>
-                      <div className="ranking-detail-grid">
-                        <span><strong>{participant.knockoutPoints}</strong> elim.</span>
-                        <span><strong>{participant.finalPoints}</strong> finales</span>
-                        <span><strong>{participant.bracketHits}</strong> llaves</span>
-                        <span><strong>{participant.qualifiedTeamHits}</strong> clasif.</span>
-                      </div>
-                    </td>
-                  </tr>
+                  <Fragment key={participant.id}>
+                    <tr className={podiumItem ? `podium-row ${podiumItem.className}` : ''}>
+                      <td className="position-cell">
+                        {podiumItem ? <span className="position-medal">{podiumItem.medal}</span> : participant.position}
+                      </td>
+                      <td>
+                        <div className="ranking-name">
+                          <strong>{participant.name}</strong>
+                          {isLeader && <span className="rank-badge leader-badge">👑 Líder</span>}
+                          {inTheFight && <span className="rank-badge fight-badge">🔥 En la pelea</span>}
+                          {exactLeader && <span className="rank-badge exact-badge">🎯 Más exactos</span>}
+                          {trend === '⬆️' && <span className="rank-badge up-badge">📈 Remontando</span>}
+                          {trend === '⬇️' && <span className="rank-badge down-badge">📉 En descenso</span>}
+                        </div>
+                      </td>
+                      <td className="trend-cell">{trend}</td>
+                      <td>
+                        <div className="rank-points-cell">
+                          <strong>{participant.totalPoints}</strong>
+                          <PointsBar color="#2563eb" max={maxPoints} value={participant.totalPoints} />
+                        </div>
+                      </td>
+                      <td className={`difference-cell ${getDifferenceClass(difference)}`}>{difference}</td>
+                      <td>{participant.groupPoints}</td>
+                      <td>
+                        <button
+                          aria-expanded={exactExpanded}
+                          className="count-button exact-count-button"
+                          onClick={() => setOpenExactParticipantId((current) => (current === participant.id ? '' : participant.id))}
+                          title={`Ver marcadores exactos de ${participant.name}`}
+                          type="button"
+                        >
+                          {participant.exactScores}
+                        </button>
+                      </td>
+                      <td>
+                        <div className="ranking-detail-grid">
+                          <span><strong>{participant.knockoutPoints}</strong> elim.</span>
+                          <span><strong>{participant.finalPoints}</strong> finales</span>
+                          <span><strong>{participant.bracketHits}</strong> llaves</span>
+                          <span><strong>{participant.qualifiedTeamHits}</strong> clasif.</span>
+                        </div>
+                      </td>
+                    </tr>
+                    {exactExpanded && (
+                      <tr className="ranking-expanded-row">
+                        <td colSpan="8">
+                          <ExactHitList details={exactDetails} />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 );
               })}
             </tbody>

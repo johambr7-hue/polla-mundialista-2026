@@ -1326,6 +1326,34 @@ th {
   grid-template-columns: minmax(120px, 1fr) minmax(120px, 3fr) 42px;
 }
 
+.chart-bar-item {
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+}
+
+.chart-bar-item.expanded {
+  background: #f8fbff;
+  border: 1px solid #dbeafe;
+  padding: 8px;
+}
+
+.bar-row.interactive {
+  border-radius: 8px;
+  cursor: pointer;
+  margin: -4px;
+  padding: 4px;
+  transition: background 160ms ease, box-shadow 160ms ease;
+}
+
+.bar-row.interactive:hover,
+.bar-row.interactive:focus-visible,
+.bar-row.interactive[aria-expanded="true"] {
+  background: #eaf1ff;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+  outline: 0;
+}
+
 .bar-row span {
   color: #3f4a5f;
   font-weight: 700;
@@ -1408,6 +1436,59 @@ th {
 .count-button[aria-expanded="true"] {
   background: #eaf1ff;
   color: #1d4ed8;
+}
+
+.exact-count-button {
+  border: 1px solid transparent;
+  min-width: 42px;
+}
+
+.exact-count-button[aria-expanded="true"] {
+  border-color: #bfdbfe;
+}
+
+.exact-hit-list {
+  background: #f8fafc;
+  border: 1px solid #e5e9f1;
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+}
+
+.exact-hit-list article {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #e5e9f1;
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(110px, 0.8fr) minmax(180px, 1.5fr) auto;
+  padding: 10px 12px;
+}
+
+.exact-hit-list span {
+  color: #1d4ed8;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.exact-hit-list strong {
+  color: #172033;
+  line-height: 1.15;
+}
+
+.exact-hit-list em {
+  color: #047857;
+  font-style: normal;
+  font-weight: 900;
+  text-align: right;
+}
+
+.ranking-expanded-row td {
+  background: #f8fbff;
+  padding: 10px 12px 14px;
 }
 
 .prediction-name-list {
@@ -2410,6 +2491,15 @@ th {
   .search-score,
   .bar-row {
     grid-template-columns: 1fr;
+  }
+
+  .exact-hit-list article {
+    align-items: start;
+    grid-template-columns: 1fr;
+  }
+
+  .exact-hit-list em {
+    text-align: left;
   }
 
   .world-dashboard-grid {
