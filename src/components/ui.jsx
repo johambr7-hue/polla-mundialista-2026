@@ -7,9 +7,9 @@ export const getInitials = (name = '') =>
     .join('')
     .toUpperCase() || 'PM';
 
-export function Avatar({ name, size = 'md' }) {
+export function Avatar({ name, size = 'md', variant = 'default' }) {
   return (
-    <span className={`avatar avatar-${size}`} aria-hidden="true">
+    <span className={`avatar avatar-${size} avatar-${variant}`} aria-hidden="true">
       {getInitials(name)}
     </span>
   );

@@ -7,6 +7,7 @@ const emptyForm = { name: '', email: '', phone: '', paid: false, paymentMethod: 
 function ParticipantPanel({ deleteParticipant, isAdmin, participants, updateParticipants }) {
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
+  const [activeView, setActiveView] = useState('list');
 
   const submitParticipant = (event) => {
     event.preventDefault();
@@ -24,10 +25,12 @@ function ParticipantPanel({ deleteParticipant, isAdmin, participants, updatePart
 
     setForm(emptyForm);
     setEditingId(null);
+    setActiveView('list');
   };
 
   const editParticipant = (participant) => {
     setEditingId(participant.id);
+    setActiveView('form');
     setForm({
       name: participant.name,
       email: participant.email,
@@ -52,8 +55,35 @@ function ParticipantPanel({ deleteParticipant, isAdmin, participants, updatePart
   };
 
   return (
-    <section className="section-grid two-columns">
-      <form className="panel" onSubmit={submitParticipant}>
+    <section className="participants-page stack-list">
+      <div className="panel participant-tabs-panel">
+        <div className="panel-heading">
+          <div>
+            <h3>Gestión de participantes</h3>
+            <p className="muted">Consulta pagos, edita datos o crea un participante desde una pestaña separada.</p>
+          </div>
+          <span className="counter">{participants.length}</span>
+        </div>
+        <div className="tab-strip">
+          <button
+            className={activeView === 'list' ? 'tab-button active' : 'tab-button'}
+            onClick={() => setActiveView('list')}
+            type="button"
+          >
+            Participantes
+          </button>
+          <button
+            className={activeView === 'form' ? 'tab-button active' : 'tab-button'}
+            onClick={() => setActiveView('form')}
+            type="button"
+          >
+            {editingId ? 'Editar participante' : 'Crear participante'}
+          </button>
+        </div>
+      </div>
+
+      {activeView === 'form' && (
+      <form className="panel participant-form-panel" onSubmit={submitParticipant}>
         <div className="panel-heading">
           <h3>{editingId ? 'Editar participante' : 'Crear participante'}</h3>
           {editingId && (
@@ -62,6 +92,7 @@ function ParticipantPanel({ deleteParticipant, isAdmin, participants, updatePart
               onClick={() => {
                 setEditingId(null);
                 setForm(emptyForm);
+                setActiveView('list');
               }}
               type="button"
               title="Cancelar"
@@ -129,16 +160,18 @@ function ParticipantPanel({ deleteParticipant, isAdmin, participants, updatePart
         </button>
         {!isAdmin && <p className="muted">Entra como administrador para crear, editar o eliminar participantes.</p>}
       </form>
+      )}
 
-      <div className="panel">
+      {activeView === 'list' && (
+      <div className="panel participants-list-panel">
         <div className="panel-heading">
           <h3>Participantes</h3>
           <span className="counter">{participants.length}</span>
         </div>
-        <div className="stack-list">
+        <div className="participants-list-grid">
           {participants.map((participant) => (
             <article className="list-item participant-card" key={participant.id ?? participant.name}>
-              <Avatar name={participant.name} />
+              <Avatar name={participant.name} variant="ball" />
               <div>
                 <strong>{participant.name}</strong>
                 <span>{participant.email || 'Sin correo'}</span>
@@ -149,7 +182,7 @@ function ParticipantPanel({ deleteParticipant, isAdmin, participants, updatePart
               </div>
               <div className="row-actions">
                 <button
-                  className={participant.paid ? 'secondary-button compact' : 'primary-button compact'}
+                  className={participant.paid ? 'payment-toggle paid' : 'payment-toggle pending'}
                   disabled={!isAdmin || !participant.id}
                   onClick={() =>
                     updatePayment(participant.id, {
@@ -184,6 +217,7 @@ function ParticipantPanel({ deleteParticipant, isAdmin, participants, updatePart
           ))}
         </div>
       </div>
+      )}
     </section>
   );
 }
