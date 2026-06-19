@@ -184,6 +184,7 @@ function ParticipantPanel({ deleteParticipant, isAdmin, participants, updatePart
                 <button
                   className={participant.paid ? 'payment-toggle paid' : 'payment-toggle pending'}
                   disabled={!isAdmin || !participant.id}
+                  aria-label={participant.paid ? 'Marcar pago como pendiente' : 'Marcar pago como pagado'}
                   onClick={() =>
                     updatePayment(participant.id, {
                       paid: !participant.paid,
@@ -192,7 +193,7 @@ function ParticipantPanel({ deleteParticipant, isAdmin, participants, updatePart
                   }
                   type="button"
                 >
-                  {participant.paid ? 'Pendiente' : 'Pagado'}
+                  {participant.paid ? 'Pagado' : 'Pendiente'}
                 </button>
                 <button
                   className="icon-button"
