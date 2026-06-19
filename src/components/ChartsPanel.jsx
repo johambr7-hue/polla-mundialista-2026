@@ -24,9 +24,34 @@ function ChartsPanel({ matches, participants, predictions, ranking }) {
   );
   const [selectedMatchId, setSelectedMatchId] = useState('');
   const [openScore, setOpenScore] = useState('');
+  const [matchSearch, setMatchSearch] = useState('');
+  const [stageFilter, setStageFilter] = useState('Todas las fases');
+  const [groupFilter, setGroupFilter] = useState('Todos los grupos');
   const maxPoints = Math.max(...ranking.map((item) => item.totalPoints), 1);
   const maxExact = Math.max(...ranking.map((item) => item.exactScores), 1);
-  const match = matchesWithPredictions.find((item) => item.id === selectedMatchId) ?? matchesWithPredictions[0] ?? matches[0];
+  const stageOptions = useMemo(
+    () => ['Todas las fases', ...new Set(matchesWithPredictions.map((item) => item.stage).filter(Boolean))],
+    [matchesWithPredictions]
+  );
+  const groupOptions = useMemo(
+    () => ['Todos los grupos', ...new Set(matchesWithPredictions.map((item) => item.group).filter(Boolean).map((group) => `Grupo ${group}`))],
+    [matchesWithPredictions]
+  );
+  const filteredMatches = useMemo(() => {
+    const query = matchSearch.trim().toLowerCase();
+    return matchesWithPredictions.filter((item) => {
+      const stageMatches = stageFilter === 'Todas las fases' || item.stage === stageFilter;
+      const groupMatches = groupFilter === 'Todos los grupos' || `Grupo ${item.group}` === groupFilter;
+      const searchText = `#${item.matchNumber} ${displayMatch(item)} ${item.stage} Grupo ${item.group}`.toLowerCase();
+      return stageMatches && groupMatches && (!query || searchText.includes(query));
+    });
+  }, [groupFilter, matchSearch, matchesWithPredictions, stageFilter]);
+  const match =
+    matchesWithPredictions.find((item) => item.id === selectedMatchId) ??
+    filteredMatches[0] ??
+    matchesWithPredictions[0] ??
+    matches[0];
+  const visibleMatchOptions = filteredMatches.slice(0, 12);
   const distribution = match ? getPredictionDistribution(match, predictions) : [];
   const maxDistribution = Math.max(...distribution.map((item) => item.count), 1);
   const hasOfficialScore =
@@ -95,22 +120,54 @@ function ChartsPanel({ matches, participants, predictions, ranking }) {
               Resultado real: <strong>{officialScoreLabel}</strong>
             </p>
           </div>
-          <label className="chart-match-selector">
-            Partido
-            <select
-              onChange={(event) => {
-                setSelectedMatchId(event.target.value);
-                setOpenScore('');
-              }}
-              value={match?.id ?? ''}
-            >
-              {matchesWithPredictions.map((item) => (
-                <option key={item.id} value={item.id}>
-                  #{item.matchNumber ?? '-'} · {displayMatch(item)}
-                </option>
-              ))}
-            </select>
-          </label>
+        </div>
+        <div className="chart-match-browser">
+          <div className="chart-match-filters">
+            <label>
+              Buscar
+              <input
+                onChange={(event) => setMatchSearch(event.target.value)}
+                placeholder="Equipo o # partido"
+                value={matchSearch}
+              />
+            </label>
+            <label>
+              Fase
+              <select onChange={(event) => setStageFilter(event.target.value)} value={stageFilter}>
+                {stageOptions.map((stage) => (
+                  <option key={stage} value={stage}>{stage}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Grupo
+              <select onChange={(event) => setGroupFilter(event.target.value)} value={groupFilter}>
+                {groupOptions.map((group) => (
+                  <option key={group} value={group}>{group}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="match-picker-list" aria-label="Partidos filtrados">
+            {visibleMatchOptions.map((item) => (
+              <button
+                className={item.id === match?.id ? 'match-picker active' : 'match-picker'}
+                key={item.id}
+                onClick={() => {
+                  setSelectedMatchId(item.id);
+                  setOpenScore('');
+                }}
+                type="button"
+              >
+                <strong>#{item.matchNumber ?? '-'}</strong>
+                <span>{displayMatch(item)}</span>
+              </button>
+            ))}
+          </div>
+          {filteredMatches.length > visibleMatchOptions.length && (
+            <p className="muted">Mostrando 12 de {filteredMatches.length}. Usa el buscador para reducir la lista.</p>
+          )}
+          {!filteredMatches.length && <p className="muted">No hay partidos con esos filtros.</p>}
         </div>
         {distribution.length ? (
           <div className="distribution-list">
