@@ -473,7 +473,7 @@ th {
   align-items: end;
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(2, minmax(180px, 260px));
+  grid-template-columns: minmax(220px, 340px) repeat(2, minmax(180px, 260px));
 }
 
 .participant-summary {

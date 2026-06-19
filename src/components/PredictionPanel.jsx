@@ -20,6 +20,12 @@ const phases = ['Fase de grupos', 'Dieciseisavos', 'Octavos', 'Cuartos', 'Semifi
 const groupOptions = ['Todos los grupos', ...'ABCDEFGHIJKL'.split('').map((group) => `Grupo ${group}`)];
 
 const getMatchGroupLabel = (match) => `Grupo ${match.group}`;
+const normalizeSearch = (value) =>
+  String(value ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
 
 function PredictionPanel({
   currentParticipantId,
@@ -35,6 +41,7 @@ function PredictionPanel({
   const [selectedParticipantId, setSelectedParticipantId] = useState(currentParticipantId);
   const [phaseFilter, setPhaseFilter] = useState('Fase de grupos');
   const [groupFilter, setGroupFilter] = useState('Todos los grupos');
+  const [teamSearch, setTeamSearch] = useState('');
   const participantId = isAdmin ? selectedParticipantId : currentParticipantId;
   const predictionsClosed = Boolean(settings.predictionsLocked) && !isAdmin;
   const adminCanEditPlayedMatches = isAdmin && !settings.predictionsLocked;
@@ -226,12 +233,29 @@ function PredictionPanel({
     );
   };
 
-  const phaseMatches = sortedMatches.filter((match) => match.stage === phaseFilter);
+  const teamSearchQuery = normalizeSearch(teamSearch);
+  const matchIncludesTeam = (match) => {
+    if (!teamSearchQuery) return true;
+    const prediction = predictions.find((item) => item.matchId === match.id && item.participantId === participantId);
+    const text = [
+      match.homeTeam,
+      match.awayTeam,
+      prediction?.predictedHomeTeam,
+      prediction?.predictedAwayTeam,
+      prediction?.qualifiedTeam,
+      prediction?.penaltyWinner
+    ]
+      .map((value) => normalizeSearch(displayTeam(value) || value))
+      .join(' ');
+    return text.includes(teamSearchQuery);
+  };
+  const phaseMatches = sortedMatches.filter((match) => match.stage === phaseFilter && matchIncludesTeam(match));
   const visibleGroupMatches = phaseMatches.filter((match) => groupFilter === 'Todos los grupos' || getMatchGroupLabel(match) === groupFilter);
   const groupedMatches = groupOptions.slice(1).map((groupLabel) => ({
     groupLabel,
     matches: phaseMatches.filter((match) => getMatchGroupLabel(match) === groupLabel)
   })).filter((group) => group.matches.length);
+  const showingTeamResults = Boolean(teamSearchQuery);
 
   return (
     <section className="stack-list">
@@ -272,6 +296,14 @@ function PredictionPanel({
 
         <div className="filter-bar">
           <label>
+            Buscar selección
+            <input
+              onChange={(event) => setTeamSearch(event.target.value)}
+              placeholder="Ej: Colombia, Brasil, Francia"
+              value={teamSearch}
+            />
+          </label>
+          <label>
             Fase
             <select onChange={(event) => setPhaseFilter(event.target.value)} value={phaseFilter}>
               {phases.map((phase) => <option key={phase} value={phase}>{phase === 'Semifinal' ? 'Semifinales' : phase}</option>)}
@@ -287,7 +319,13 @@ function PredictionPanel({
           )}
         </div>
 
-        {phaseFilter === 'Fase de grupos' && groupFilter === 'Todos los grupos' ? (
+        {showingTeamResults && (
+          <p className="muted">
+            {visibleGroupMatches.length} partidos encontrados para “{teamSearch}”.
+          </p>
+        )}
+
+        {phaseFilter === 'Fase de grupos' && groupFilter === 'Todos los grupos' && !showingTeamResults ? (
           <div className="accordion-list">
             {groupedMatches.map((group, index) => (
               <details className="accordion-panel" key={group.groupLabel} open={index < 2}>
@@ -303,6 +341,7 @@ function PredictionPanel({
             {visibleGroupMatches.map(renderMatchCard)}
           </div>
         )}
+        {!visibleGroupMatches.length && <p className="muted">No hay predicciones para esa selección con los filtros actuales.</p>}
       </div>
 
       <div className="panel">
