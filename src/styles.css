@@ -207,6 +207,101 @@ th {
   gap: 10px;
 }
 
+.participant-selector-wrap {
+  min-width: min(320px, 46vw);
+  position: relative;
+}
+
+.participant-selector {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #d7dce5;
+  border-radius: 8px;
+  color: #172033;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-start;
+  min-height: 42px;
+  padding: 0 12px;
+  width: 100%;
+}
+
+.participant-selector span {
+  display: block;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.participant-selector.disabled {
+  color: #66728a;
+  opacity: 0.7;
+}
+
+.participant-selector-menu {
+  background: #fff;
+  border: 1px solid #d7dce5;
+  border-radius: 8px;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.18);
+  display: grid;
+  gap: 8px;
+  left: 0;
+  padding: 10px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 20;
+}
+
+.participant-search {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e2e7f0;
+  border-radius: 8px;
+  display: flex;
+  gap: 8px;
+  padding: 0 10px;
+}
+
+.participant-search input {
+  background: transparent;
+  border: 0;
+  min-height: 40px;
+  padding: 0;
+}
+
+.participant-options {
+  display: grid;
+  gap: 4px;
+  max-height: 290px;
+  overflow-y: auto;
+}
+
+.participant-options button {
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  color: #172033;
+  font-weight: 800;
+  min-height: 38px;
+  padding: 0 10px;
+  text-align: left;
+}
+
+.participant-options button:hover,
+.participant-options button.active {
+  background: #eaf1ff;
+  color: #1d4ed8;
+}
+
+.participant-options p {
+  color: #66728a;
+  font-weight: 800;
+  margin: 0;
+  padding: 10px;
+}
+
 .eyebrow {
   color: #5f6f89;
   display: block;
@@ -1287,6 +1382,10 @@ th {
   .import-actions {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .participant-selector-wrap {
+    min-width: 100%;
   }
 
   .nav-list,

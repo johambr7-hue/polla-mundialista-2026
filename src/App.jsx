@@ -17,6 +17,7 @@ import ChartsPanel from './components/ChartsPanel';
 import ImportCalendarPanel from './components/ImportCalendarPanel';
 import MatchPanel from './components/MatchPanel';
 import ParticipantPanel from './components/ParticipantPanel';
+import ParticipantSelector from './components/ParticipantSelector';
 import PredictionPanel from './components/PredictionPanel';
 import RankingTable from './components/RankingTable';
 import RulesPanel from './components/RulesPanel';
@@ -430,21 +431,11 @@ function App() {
             </h2>
           </div>
           <div className="topbar-actions">
-            <select
-              aria-label="Participante actual"
-              onChange={(event) => setCurrentParticipantId(event.target.value)}
+            <ParticipantSelector
+              onChange={setCurrentParticipantId}
+              participants={state.participants}
               value={currentParticipantId}
-            >
-              {state.participants.length ? (
-                state.participants.map((participant) => (
-                  <option key={participant.id} value={participant.id}>
-                    {participant.name}
-                  </option>
-                ))
-              ) : (
-                <option value="">Sin participantes</option>
-              )}
-            </select>
+            />
             <button className="secondary-button" onClick={exportAll} type="button">
               <Download size={18} />
               CSV
