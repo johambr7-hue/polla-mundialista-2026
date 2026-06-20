@@ -8,7 +8,7 @@ import {
   isMatchScorable,
   isPredictionDraw
 } from '../utils/scoring';
-import { displayTeam } from '../utils/localization';
+import { displayTeam, getTeamFlag } from '../utils/localization';
 
 const isGroupStage = (stage) => stage === 'Fase de grupos';
 const finalFields = [
@@ -28,58 +28,6 @@ const normalizeSearch = (value) =>
     .replace(/[\u0300-\u036f]/g, '')
     .trim();
 
-const teamFlags = {
-  mexico: '🇲🇽',
-  'corea del sur': '🇰🇷',
-  'republica checa': '🇨🇿',
-  sudafrica: '🇿🇦',
-  canada: '🇨🇦',
-  suiza: '🇨🇭',
-  catar: '🇶🇦',
-  'bosnia y herzegovina': '🇧🇦',
-  brasil: '🇧🇷',
-  marruecos: '🇲🇦',
-  haiti: '🇭🇹',
-  escocia: '🏴',
-  'estados unidos': '🇺🇸',
-  paraguay: '🇵🇾',
-  australia: '🇦🇺',
-  turquia: '🇹🇷',
-  alemania: '🇩🇪',
-  curazao: '🇨🇼',
-  'costa de marfil': '🇨🇮',
-  ecuador: '🇪🇨',
-  'paises bajos': '🇳🇱',
-  japon: '🇯🇵',
-  suecia: '🇸🇪',
-  tunez: '🇹🇳',
-  belgica: '🇧🇪',
-  egipto: '🇪🇬',
-  iran: '🇮🇷',
-  'nueva zelanda': '🇳🇿',
-  espana: '🇪🇸',
-  'cabo verde': '🇨🇻',
-  'arabia saudita': '🇸🇦',
-  uruguay: '🇺🇾',
-  francia: '🇫🇷',
-  senegal: '🇸🇳',
-  noruega: '🇳🇴',
-  irak: '🇮🇶',
-  argentina: '🇦🇷',
-  argelia: '🇩🇿',
-  austria: '🇦🇹',
-  jordania: '🇯🇴',
-  colombia: '🇨🇴',
-  portugal: '🇵🇹',
-  'rd congo': '🇨🇩',
-  uzbekistan: '🇺🇿',
-  inglaterra: '🏴',
-  croacia: '🇭🇷',
-  ghana: '🇬🇭',
-  panama: '🇵🇦'
-};
-
-const getTeamFlag = (team) => teamFlags[normalizeSearch(displayTeam(team) || team)] ?? '⚽';
 const formatScoreValue = (value) => (value === '' || value === undefined || value === null ? '-' : value);
 
 function PredictionPanel({

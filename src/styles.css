@@ -1338,6 +1338,16 @@ th {
   font-weight: 800;
 }
 
+.match-picker small {
+  background: #ecfdf3;
+  border: 1px solid #bbf7d0;
+  border-radius: 999px;
+  color: #047857;
+  font-size: 0.72rem;
+  font-weight: 900;
+  padding: 4px 8px;
+}
+
 .match-picker:hover,
 .match-picker.active {
   background: #eaf1ff;
@@ -1417,6 +1427,7 @@ th {
 
 .distribution-row {
   border-radius: 8px;
+  grid-template-columns: minmax(300px, 1.45fr) minmax(120px, 3fr) 42px;
   padding: 2px 0;
 }
 
@@ -1425,6 +1436,52 @@ th {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.score-matchup-label {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  line-height: 1.15;
+}
+
+.score-team-score {
+  align-items: center;
+  display: inline-flex;
+  gap: 5px;
+  min-width: 0;
+}
+
+.score-team-score strong {
+  color: #172033;
+  font-size: 0.86rem;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.score-team-score em {
+  background: #eef2f7;
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+  color: #172033;
+  font-style: normal;
+  font-weight: 950;
+  min-width: 28px;
+  padding: 3px 7px;
+  text-align: center;
+}
+
+.team-flag {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.score-separator {
+  color: #94a3b8;
+  font-weight: 900;
 }
 
 .distribution-score small,

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { getPredictionDistribution } from '../utils/scoring';
-import { displayMatch, displayTeam } from '../utils/localization';
+import { displayMatch, displayTeam, getTeamFlag } from '../utils/localization';
 import { getExactScoreDetails } from '../utils/exactScoreDetails';
 
 const palette = ['#2563eb', '#16a34a', '#f59e0b', '#dc2626', '#7c3aed', '#0891b2'];
@@ -12,6 +12,16 @@ const normalizeSearch = (value) =>
     .trim();
 
 const formatScore = (score) => String(score || '-').replace('-', ' - ');
+const getLocalDateKey = (date = new Date()) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+const getMatchSortKey = (match) =>
+  `${match.date ?? ''} ${match.time ?? ''} ${String(match.matchNumber ?? '').padStart(3, '0')}`;
+
+const getScoreParts = (score) => {
+  const [homeGoals = '-', awayGoals = '-'] = String(score ?? '').split('-');
+  return { homeGoals, awayGoals };
+};
 
 function ExactHitList({ details }) {
   return (
@@ -30,6 +40,29 @@ function ExactHitList({ details }) {
         <p className="muted">No tiene marcadores exactos todavía.</p>
       )}
     </div>
+  );
+}
+
+function DistributionScoreLabel({ isOfficialScore, match, score }) {
+  const { homeGoals, awayGoals } = getScoreParts(score);
+
+  return (
+    <span className="distribution-score">
+      <span className="score-matchup-label">
+        <span className="score-team-score">
+          <span className="team-flag">{getTeamFlag(match?.homeTeam)}</span>
+          <strong>{displayTeam(match?.homeTeam) || 'Local'}</strong>
+          <em>{homeGoals}</em>
+        </span>
+        <span className="score-separator">-</span>
+        <span className="score-team-score">
+          <em>{awayGoals}</em>
+          <span className="team-flag">{getTeamFlag(match?.awayTeam)}</span>
+          <strong>{displayTeam(match?.awayTeam) || 'Visitante'}</strong>
+        </span>
+      </span>
+      {isOfficialScore && <small>Resultado real</small>}
+    </span>
   );
 }
 
@@ -65,8 +98,12 @@ function Bar({ children, color, expanded = false, label, max, onClick, value }) 
 }
 
 function ChartsPanel({ matches, participants, predictions, ranking }) {
+  const todayKey = useMemo(() => getLocalDateKey(), []);
   const matchesWithPredictions = useMemo(
-    () => matches.filter((item) => predictions.some((prediction) => prediction.matchId === item.id)),
+    () =>
+      matches
+        .filter((item) => predictions.some((prediction) => prediction.matchId === item.id))
+        .sort((a, b) => getMatchSortKey(a).localeCompare(getMatchSortKey(b))),
     [matches, predictions]
   );
   const [selectedMatchId, setSelectedMatchId] = useState('');
@@ -94,12 +131,22 @@ function ChartsPanel({ matches, participants, predictions, ranking }) {
       return stageMatches && groupMatches && (!query || searchText.includes(query));
     });
   }, [groupFilter, matchSearch, matchesWithPredictions, stageFilter]);
+  const todayMatches = useMemo(
+    () => filteredMatches.filter((item) => item.date === todayKey),
+    [filteredMatches, todayKey]
+  );
+  const showingTodaySuggestions =
+    !matchSearch.trim() &&
+    stageFilter === 'Todas las fases' &&
+    groupFilter === 'Todos los grupos' &&
+    todayMatches.length > 0;
+  const visibleMatchOptions = (showingTodaySuggestions ? todayMatches : filteredMatches).slice(0, 12);
   const match =
-    matchesWithPredictions.find((item) => item.id === selectedMatchId) ??
+    (selectedMatchId ? matchesWithPredictions.find((item) => item.id === selectedMatchId) : null) ??
+    visibleMatchOptions[0] ??
     filteredMatches[0] ??
     matchesWithPredictions[0] ??
     matches[0];
-  const visibleMatchOptions = filteredMatches.slice(0, 12);
   const distribution = match ? getPredictionDistribution(match, predictions) : [];
   const maxDistribution = Math.max(...distribution.map((item) => item.count), 1);
   const hasOfficialScore =
@@ -218,10 +265,13 @@ function ChartsPanel({ matches, participants, predictions, ranking }) {
               >
                 <strong>#{item.matchNumber ?? '-'}</strong>
                 <span>{displayMatch(item)}</span>
+                {item.date === todayKey && <small>Hoy · {item.time || 'Hora por definir'}</small>}
               </button>
             ))}
           </div>
-          {filteredMatches.length > visibleMatchOptions.length && (
+          {showingTodaySuggestions ? (
+            <p className="muted">Mostrando partidos de hoy. Usa el buscador o filtros para consultar otros partidos.</p>
+          ) : filteredMatches.length > visibleMatchOptions.length && (
             <p className="muted">Mostrando 12 de {filteredMatches.length}. Usa el buscador para reducir la lista.</p>
           )}
           {!filteredMatches.length && <p className="muted">No hay partidos con esos filtros.</p>}
@@ -250,10 +300,7 @@ function ChartsPanel({ matches, participants, predictions, ranking }) {
                     tabIndex={0}
                     title={`Ver participantes con marcador ${item.score.replace('-', ' - ')}`}
                   >
-                    <span className="distribution-score">
-                      {item.score.replace('-', ' - ')}
-                      {isOfficialScore && <small>Resultado real</small>}
-                    </span>
+                    <DistributionScoreLabel isOfficialScore={isOfficialScore} match={match} score={item.score} />
                     <div className="bar-track">
                       <div className="bar-fill" style={{ width: `${width}%`, background: palette[(index + 4) % palette.length] }} />
                     </div>

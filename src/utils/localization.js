@@ -54,6 +54,64 @@ const teamNames = {
   Panama: 'Panamá'
 };
 
+const normalizeDisplayText = (value) =>
+  String(value ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+
+const teamFlags = {
+  mexico: '🇲🇽',
+  'corea del sur': '🇰🇷',
+  'republica checa': '🇨🇿',
+  sudafrica: '🇿🇦',
+  canada: '🇨🇦',
+  suiza: '🇨🇭',
+  catar: '🇶🇦',
+  'bosnia y herzegovina': '🇧🇦',
+  brasil: '🇧🇷',
+  marruecos: '🇲🇦',
+  haiti: '🇭🇹',
+  escocia: '🏴',
+  'estados unidos': '🇺🇸',
+  paraguay: '🇵🇾',
+  australia: '🇦🇺',
+  turquia: '🇹🇷',
+  alemania: '🇩🇪',
+  curazao: '🇨🇼',
+  'costa de marfil': '🇨🇮',
+  ecuador: '🇪🇨',
+  'paises bajos': '🇳🇱',
+  japon: '🇯🇵',
+  suecia: '🇸🇪',
+  tunez: '🇹🇳',
+  belgica: '🇧🇪',
+  egipto: '🇪🇬',
+  iran: '🇮🇷',
+  'nueva zelanda': '🇳🇿',
+  espana: '🇪🇸',
+  'cabo verde': '🇨🇻',
+  'arabia saudita': '🇸🇦',
+  uruguay: '🇺🇾',
+  francia: '🇫🇷',
+  senegal: '🇸🇳',
+  noruega: '🇳🇴',
+  irak: '🇮🇶',
+  argentina: '🇦🇷',
+  argelia: '🇩🇿',
+  austria: '🇦🇹',
+  jordania: '🇯🇴',
+  colombia: '🇨🇴',
+  portugal: '🇵🇹',
+  'rd congo': '🇨🇩',
+  uzbekistan: '🇺🇿',
+  inglaterra: '🏴',
+  croacia: '🇭🇷',
+  ghana: '🇬🇭',
+  panama: '🇵🇦'
+};
+
 const displayPlaceholder = (team) => {
   if (!team) return '';
 
@@ -80,6 +138,8 @@ export const displayTeam = (team) => {
   if (!team) return '';
   return teamNames[team] ?? (displayPlaceholder(team) || team);
 };
+
+export const getTeamFlag = (team) => teamFlags[normalizeDisplayText(displayTeam(team) || team)] ?? '⚽';
 
 export const displayMatch = (match) =>
   match ? `${displayTeam(match.homeTeam)} vs ${displayTeam(match.awayTeam)}` : '';
