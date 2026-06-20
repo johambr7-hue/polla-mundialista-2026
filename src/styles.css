@@ -2388,6 +2388,38 @@ th {
   padding: 14px;
 }
 
+.participant-hero-picker {
+  position: relative;
+}
+
+.participant-hero-button {
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+  width: 100%;
+}
+
+.participant-hero-button:hover,
+.participant-hero-button[aria-expanded='true'] {
+  border-color: rgba(37, 99, 235, 0.45);
+  box-shadow: 0 16px 34px rgba(37, 99, 235, 0.12);
+  transform: translateY(-1px);
+}
+
+.participant-hero-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.participant-hero-menu {
+  left: 0;
+  max-width: 520px;
+  right: auto;
+  width: min(520px, 100%);
+  z-index: 35;
+}
+
 .participant-hero strong {
   color: var(--ink);
   display: block;

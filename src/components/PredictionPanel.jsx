@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Lock, Save } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Lock, Save, Search } from 'lucide-react';
 import { Avatar, SportBadge } from './ui';
 import {
   calculatePredictionBreakdown,
@@ -44,6 +44,7 @@ function PredictionPanel({
   predictions,
   ranking,
   settings,
+  onParticipantChange,
   updateFinalPredictions,
   updatePredictions
 }) {
@@ -53,6 +54,9 @@ function PredictionPanel({
   const [groupFilter, setGroupFilter] = useState('Todos los grupos');
   const [teamSearch, setTeamSearch] = useState('');
   const [bracketPhaseFilter, setBracketPhaseFilter] = useState('Todas las llaves');
+  const [participantPickerOpen, setParticipantPickerOpen] = useState(false);
+  const [participantSearch, setParticipantSearch] = useState('');
+  const participantPickerRef = useRef(null);
   const participantId = isAdmin ? selectedParticipantId : currentParticipantId;
   const predictionsClosed = Boolean(settings.predictionsLocked) && !isAdmin;
   const adminCanEditPlayedMatches = isAdmin && !settings.predictionsLocked;
@@ -64,6 +68,10 @@ function PredictionPanel({
     () => [...matches].sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)),
     [matches]
   );
+  const filteredParticipants = useMemo(() => {
+    const query = normalizeSearch(participantSearch);
+    return participants.filter((item) => !query || normalizeSearch(item.name).includes(query));
+  }, [participantSearch, participants]);
   const participantPredictions = predictions.filter((prediction) => prediction.participantId === participantId);
   const participantSummary = participantPredictions.reduce(
     (acc, prediction) => {
@@ -81,6 +89,41 @@ function PredictionPanel({
   );
 
   const finalPrediction = finalPredictions[participantId] ?? {};
+
+  useEffect(() => {
+    setSelectedParticipantId(currentParticipantId);
+  }, [currentParticipantId]);
+
+  useEffect(() => {
+    if (!participantPickerOpen) return undefined;
+
+    const closeOnOutsideClick = (event) => {
+      if (participantPickerRef.current && !participantPickerRef.current.contains(event.target)) {
+        setParticipantPickerOpen(false);
+        setParticipantSearch('');
+      }
+    };
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') {
+        setParticipantPickerOpen(false);
+        setParticipantSearch('');
+      }
+    };
+
+    document.addEventListener('mousedown', closeOnOutsideClick);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('mousedown', closeOnOutsideClick);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [participantPickerOpen]);
+
+  const chooseParticipant = (nextParticipantId) => {
+    setSelectedParticipantId(nextParticipantId);
+    onParticipantChange?.(nextParticipantId);
+    setParticipantPickerOpen(false);
+    setParticipantSearch('');
+  };
 
   const normalizeValue = (field, value) => {
     if (field === 'homeScore' || field === 'awayScore') return value === '' ? '' : Number(value);
@@ -372,27 +415,54 @@ function PredictionPanel({
             <h3>Predicciones de {participant?.name}</h3>
             <p className="muted">Consulta una fase o grupo sin navegar una página interminable.</p>
           </div>
-          {isAdmin && (
-            <select onChange={(event) => setSelectedParticipantId(event.target.value)} value={participantId}>
-              {participants.map((item) => (
-                <option key={item.id} value={item.id}>{item.name}</option>
-              ))}
-            </select>
-          )}
         </div>
 
-        <div className="participant-hero">
-          <Avatar name={participant?.name} size="lg" variant="ball" />
-          <div>
-            <strong>{participant?.name ?? 'Participante'}</strong>
-            <span>#{participantStanding?.position ?? '-'} del torneo</span>
-          </div>
-          <div className="participant-hero-stats">
-            <SportBadge tone="blue">{participantSummary.points} puntos</SportBadge>
-            <SportBadge tone={leaderGap <= 20 ? 'gold' : 'neutral'}>🔥 A {leaderGap} puntos del líder</SportBadge>
-            <SportBadge tone="green">🎯 {participantSummary.exactScores} exactos</SportBadge>
-            <SportBadge tone="neutral">{participantSummary.resultHits} partidos acertados</SportBadge>
-          </div>
+        <div className="participant-hero-picker" ref={participantPickerRef}>
+          <button
+            aria-expanded={participantPickerOpen}
+            className="participant-hero participant-hero-button"
+            disabled={!participants.length}
+            onClick={() => setParticipantPickerOpen((current) => !current)}
+            type="button"
+          >
+            <Avatar name={participant?.name} size="lg" variant="ball" />
+            <div>
+              <strong>{participant?.name ?? 'Seleccionar participante'}</strong>
+              <span>#{participantStanding?.position ?? '-'} del torneo</span>
+            </div>
+            <div className="participant-hero-stats">
+              <SportBadge tone="blue">{participantSummary.points} puntos</SportBadge>
+              <SportBadge tone={leaderGap <= 20 ? 'gold' : 'neutral'}>🔥 A {leaderGap} puntos del líder</SportBadge>
+              <SportBadge tone="green">🎯 {participantSummary.exactScores} exactos</SportBadge>
+              <SportBadge tone="neutral">{participantSummary.resultHits} partidos acertados</SportBadge>
+            </div>
+          </button>
+          {participantPickerOpen && (
+            <div className="participant-selector-menu participant-hero-menu">
+              <label className="participant-search">
+                <Search size={16} />
+                <input
+                  autoFocus
+                  onChange={(event) => setParticipantSearch(event.target.value)}
+                  placeholder="Buscar participante"
+                  value={participantSearch}
+                />
+              </label>
+              <div className="participant-options">
+                {filteredParticipants.map((item) => (
+                  <button
+                    className={item.id === participantId ? 'active' : ''}
+                    key={item.id}
+                    onClick={() => chooseParticipant(item.id)}
+                    type="button"
+                  >
+                    {item.name}
+                  </button>
+                ))}
+                {!filteredParticipants.length && <p>No hay coincidencias.</p>}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="participant-summary">

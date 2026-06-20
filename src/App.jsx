@@ -359,7 +359,7 @@ function App() {
   };
 
   const ActiveIcon = tabs.find((tab) => tab.id === activeTab)?.icon ?? Trophy;
-  const showParticipantSelector = ['predicciones', 'polla'].includes(activeTab);
+  const showParticipantSelector = activeTab === 'polla';
 
   return (
     <div className="app-shell">
@@ -490,6 +490,7 @@ function App() {
             predictions={state.predictions}
             ranking={ranking}
             settings={state.settings}
+            onParticipantChange={setCurrentParticipantId}
             updateFinalPredictions={updateFinalPredictions}
             updatePredictions={(predictions) => updateState({ predictions })}
           />
