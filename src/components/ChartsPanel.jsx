@@ -15,6 +15,28 @@ const formatScore = (score) => String(score || '-').replace('-', ' - ');
 const getLocalDateKey = (date = new Date()) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
+const getMatchDateTime = (match) => {
+  if (!match?.date) return null;
+  const time = match.time && match.time !== 'TBD' ? match.time : '00:00';
+  const date = new Date(`${match.date}T${time}:00Z`);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const getMatchLocalDateKey = (match) => {
+  const date = getMatchDateTime(match);
+  return date ? getLocalDateKey(date) : match?.date ?? '';
+};
+
+const getMatchLocalTime = (match) => {
+  const date = getMatchDateTime(match);
+  if (!date) return match?.time || 'Hora por definir';
+  return date.toLocaleTimeString('es-CO', {
+    hour: '2-digit',
+    hour12: false,
+    minute: '2-digit'
+  });
+};
+
 const getMatchSortKey = (match) =>
   `${match.date ?? ''} ${match.time ?? ''} ${String(match.matchNumber ?? '').padStart(3, '0')}`;
 
@@ -132,7 +154,7 @@ function ChartsPanel({ matches, participants, predictions, ranking }) {
     });
   }, [groupFilter, matchSearch, matchesWithPredictions, stageFilter]);
   const todayMatches = useMemo(
-    () => filteredMatches.filter((item) => item.date === todayKey),
+    () => filteredMatches.filter((item) => getMatchLocalDateKey(item) === todayKey),
     [filteredMatches, todayKey]
   );
   const showingTodaySuggestions =
@@ -265,7 +287,7 @@ function ChartsPanel({ matches, participants, predictions, ranking }) {
               >
                 <strong>#{item.matchNumber ?? '-'}</strong>
                 <span>{displayMatch(item)}</span>
-                {item.date === todayKey && <small>Hoy · {item.time || 'Hora por definir'}</small>}
+                {getMatchLocalDateKey(item) === todayKey && <small>Hoy · {getMatchLocalTime(item)}</small>}
               </button>
             ))}
           </div>
