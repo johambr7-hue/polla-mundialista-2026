@@ -1993,11 +1993,67 @@ th {
 }
 
 .bracket-toolbar {
-  align-items: end;
+  align-items: stretch;
+  background: #f8fafc;
+  border: 1px solid #e5e9f1;
+  border-radius: 8px;
   display: grid;
   gap: 12px;
-  grid-template-columns: minmax(240px, 1fr) minmax(190px, 260px);
+  grid-template-columns: minmax(280px, 0.85fr) minmax(420px, 1.15fr);
   margin-bottom: 16px;
+  padding: 12px;
+}
+
+.bracket-toolbar > label,
+.phase-filter-card {
+  display: grid;
+  gap: 7px;
+}
+
+.bracket-toolbar > label {
+  min-width: 0;
+}
+
+.phase-filter-card > span,
+.bracket-toolbar > label {
+  color: #475569;
+  font-size: 0.86rem;
+  font-weight: 1000;
+}
+
+.phase-chip-row {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: thin;
+}
+
+.phase-chip {
+  background: #fff;
+  border: 1px solid #dbe3ef;
+  border-radius: 999px;
+  color: #334155;
+  flex: 0 0 auto;
+  font-weight: 1000;
+  min-height: 42px;
+  padding: 0 14px;
+  transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.phase-chip:hover {
+  border-color: rgba(37, 99, 235, 0.35);
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.09);
+  transform: translateY(-1px);
+}
+
+.phase-chip.active {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #fff;
+  box-shadow: 0 12px 26px rgba(37, 99, 235, 0.18);
 }
 
 .responsive-bracket-board {

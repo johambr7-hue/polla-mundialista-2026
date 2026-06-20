@@ -564,13 +564,28 @@ function PredictionPanel({
                   value={teamSearch}
                 />
               </label>
-              <label>
-                Fase
-                <select onChange={(event) => setBracketPhaseFilter(event.target.value)} value={bracketPhaseFilter}>
-                  <option>Todas las llaves</option>
-                  {bracketPhases.map((phase) => <option key={phase} value={phase}>{phase === 'Semifinal' ? 'Semifinales' : phase}</option>)}
-                </select>
-              </label>
+              <div className="phase-filter-card">
+                <span>Fase</span>
+                <div className="phase-chip-row" role="group" aria-label="Filtrar llaves pronosticadas por fase">
+                  <button
+                    className={bracketPhaseFilter === 'Todas las llaves' ? 'phase-chip active' : 'phase-chip'}
+                    onClick={() => setBracketPhaseFilter('Todas las llaves')}
+                    type="button"
+                  >
+                    Todas
+                  </button>
+                  {bracketPhases.map((phase) => (
+                    <button
+                      className={bracketPhaseFilter === phase ? 'phase-chip active' : 'phase-chip'}
+                      key={phase}
+                      onClick={() => setBracketPhaseFilter(phase)}
+                      type="button"
+                    >
+                      {phase === 'Semifinal' ? 'Semifinales' : phase}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             {visibleBracketRounds.length ? (

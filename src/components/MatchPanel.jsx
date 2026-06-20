@@ -786,18 +786,28 @@ function MatchPanel({ isAdmin, matches, predictions, updateMatches, updatePredic
               value={bracketFilters.query}
             />
           </label>
-          <label>
-            Fase
-            <select
-              onChange={(event) => setBracketFilters({ ...bracketFilters, stage: event.target.value })}
-              value={bracketFilters.stage}
-            >
-              <option value="all">Todas las llaves</option>
+          <div className="phase-filter-card">
+            <span>Fase</span>
+            <div className="phase-chip-row" role="group" aria-label="Filtrar llaves reales por fase">
+              <button
+                className={bracketFilters.stage === 'all' ? 'phase-chip active' : 'phase-chip'}
+                onClick={() => setBracketFilters({ ...bracketFilters, stage: 'all' })}
+                type="button"
+              >
+                Todas
+              </button>
               {knockoutStageOptions.map((stage) => (
-                <option key={stage} value={stage}>{stage === 'Semifinal' ? 'Semifinales' : stage}</option>
+                <button
+                  className={bracketFilters.stage === stage ? 'phase-chip active' : 'phase-chip'}
+                  key={stage}
+                  onClick={() => setBracketFilters({ ...bracketFilters, stage })}
+                  type="button"
+                >
+                  {stage === 'Semifinal' ? 'Semifinales' : stage}
+                </button>
               ))}
-            </select>
-          </label>
+            </div>
+          </div>
         </div>
 
         {visibleBracketRounds.length ? (
