@@ -18,6 +18,7 @@ const finalFields = [
   ['fourth', 'Cuarto lugar']
 ];
 const phases = ['Fase de grupos', 'Dieciseisavos', 'Octavos', 'Cuartos', 'Semifinal', 'Tercer puesto', 'Final'];
+const bracketPhases = phases.filter((phase) => phase !== 'Fase de grupos');
 const groupOptions = ['Todos los grupos', ...'ABCDEFGHIJKL'.split('').map((group) => `Grupo ${group}`)];
 
 const getMatchGroupLabel = (match) => `Grupo ${match.group}`;
@@ -29,6 +30,10 @@ const normalizeSearch = (value) =>
     .trim();
 
 const formatScoreValue = (value) => (value === '' || value === undefined || value === null ? '-' : value);
+const isSameDisplayTeam = (a, b) => {
+  const normalizedA = normalizeSearch(displayTeam(a) || a);
+  return normalizedA !== '' && normalizedA === normalizeSearch(displayTeam(b) || b);
+};
 
 function PredictionPanel({
   currentParticipantId,
@@ -43,9 +48,11 @@ function PredictionPanel({
   updatePredictions
 }) {
   const [selectedParticipantId, setSelectedParticipantId] = useState(currentParticipantId);
+  const [activePredictionView, setActivePredictionView] = useState('matches');
   const [phaseFilter, setPhaseFilter] = useState('Fase de grupos');
   const [groupFilter, setGroupFilter] = useState('Todos los grupos');
   const [teamSearch, setTeamSearch] = useState('');
+  const [bracketPhaseFilter, setBracketPhaseFilter] = useState('Todas las llaves');
   const participantId = isAdmin ? selectedParticipantId : currentParticipantId;
   const predictionsClosed = Boolean(settings.predictionsLocked) && !isAdmin;
   const adminCanEditPlayedMatches = isAdmin && !settings.predictionsLocked;
@@ -260,6 +267,42 @@ function PredictionPanel({
     );
   };
 
+  const renderPredictionBracketMatch = ({ awayTeam, homeTeam, match, prediction, winner }) => {
+    const homeIsWinner = isSameDisplayTeam(winner, homeTeam);
+    const awayIsWinner = isSameDisplayTeam(winner, awayTeam);
+    const hasPrediction = Boolean(prediction);
+    const drawByPenalty = hasPrediction && !isGroupStage(match.stage) && isPredictionDraw(prediction);
+
+    return (
+      <article className={`bracket-match prediction-bracket-match ${winner ? 'decided' : ''}`} key={match.id}>
+        <span>#{match.matchNumber || '-'} · {match.stage}</span>
+        <div className="bracket-team-row-grid">
+          <div className={homeIsWinner ? 'bracket-team-row winner' : 'bracket-team-row'}>
+            <span>{getTeamFlag(homeTeam)}</span>
+            <strong>{displayTeam(homeTeam)}</strong>
+            <em>{formatScoreValue(prediction?.homeScore)}</em>
+          </div>
+          <div className={awayIsWinner ? 'bracket-team-row winner' : 'bracket-team-row'}>
+            <span>{getTeamFlag(awayTeam)}</span>
+            <strong>{displayTeam(awayTeam)}</strong>
+            <em>{formatScoreValue(prediction?.awayScore)}</em>
+          </div>
+        </div>
+        <div className="bracket-status-note">
+          <span className="bracket-score-chip">
+            {formatScoreValue(prediction?.homeScore)} - {formatScoreValue(prediction?.awayScore)}
+          </span>
+          <strong>
+            {winner ? `Clasifica ${displayTeam(winner)}` : hasPrediction ? 'Clasificado por definir' : 'Sin pronóstico'}
+          </strong>
+        </div>
+        {drawByPenalty && prediction?.penaltyWinner && (
+          <small>Penales: gana {displayTeam(prediction.penaltyWinner)}</small>
+        )}
+      </article>
+    );
+  };
+
   const teamSearchQuery = normalizeSearch(teamSearch);
   const matchIncludesTeam = (match) => {
     if (!teamSearchQuery) return true;
@@ -283,6 +326,43 @@ function PredictionPanel({
     matches: phaseMatches.filter((match) => getMatchGroupLabel(match) === groupLabel)
   })).filter((group) => group.matches.length);
   const showingTeamResults = Boolean(teamSearchQuery);
+  const visibleBracketRounds = bracketPhases
+    .map((stage) => ({
+      stage,
+      matches: sortedMatches
+        .filter((match) => match.stage === stage)
+        .map((match) => {
+          const prediction = predictions.find(
+            (item) => item.matchId === match.id && item.participantId === participantId
+          );
+          const homeTeam = prediction?.predictedHomeTeam || match.homeTeam;
+          const awayTeam = prediction?.predictedAwayTeam || match.awayTeam;
+          const winner = getPredictedQualifiedTeam(prediction, match);
+
+          return { awayTeam, homeTeam, match, prediction, winner };
+        })
+        .filter((item) => {
+          if (bracketPhaseFilter !== 'Todas las llaves' && item.match.stage !== bracketPhaseFilter) return false;
+          if (!teamSearchQuery) return true;
+
+          const searchableText = [
+            `#${item.match.matchNumber}`,
+            item.match.matchNumber,
+            item.match.stage,
+            item.match.homeTeam,
+            item.match.awayTeam,
+            item.homeTeam,
+            item.awayTeam,
+            item.winner,
+            item.prediction?.penaltyWinner
+          ]
+            .map((value) => normalizeSearch(displayTeam(value) || value))
+            .join(' ');
+
+          return searchableText.includes(teamSearchQuery);
+        })
+    }))
+    .filter((section) => section.matches.length);
 
   return (
     <section className="stack-list">
@@ -335,54 +415,108 @@ function PredictionPanel({
           <span>4 {displayTeam(finalPrediction.fourth) || 'Cuarto lugar por definir'}</span>
         </div>
 
-        <div className="filter-bar">
-          <label>
-            Buscar selección
-            <input
-              onChange={(event) => setTeamSearch(event.target.value)}
-              placeholder="Ej: Colombia, Brasil, Francia"
-              value={teamSearch}
-            />
-          </label>
-          <label>
-            Fase
-            <select onChange={(event) => setPhaseFilter(event.target.value)} value={phaseFilter}>
-              {phases.map((phase) => <option key={phase} value={phase}>{phase === 'Semifinal' ? 'Semifinales' : phase}</option>)}
-            </select>
-          </label>
-          {phaseFilter === 'Fase de grupos' && (
-            <label>
-              Grupo
-              <select onChange={(event) => setGroupFilter(event.target.value)} value={groupFilter}>
-                {groupOptions.map((group) => <option key={group} value={group}>{group}</option>)}
-              </select>
-            </label>
-          )}
+        <div className="tab-strip prediction-view-tabs">
+          <button
+            className={activePredictionView === 'matches' ? 'tab-button active' : 'tab-button'}
+            onClick={() => setActivePredictionView('matches')}
+            type="button"
+          >
+            Partidos
+          </button>
+          <button
+            className={activePredictionView === 'bracket' ? 'tab-button active' : 'tab-button'}
+            onClick={() => setActivePredictionView('bracket')}
+            type="button"
+          >
+            Llaves
+          </button>
         </div>
 
-        {showingTeamResults && (
-          <p className="muted">
-            {visibleGroupMatches.length} partidos encontrados para “{teamSearch}”.
-          </p>
-        )}
+        {activePredictionView === 'matches' ? (
+          <>
+            <div className="filter-bar">
+              <label>
+                Buscar selección
+                <input
+                  onChange={(event) => setTeamSearch(event.target.value)}
+                  placeholder="Ej: Colombia, Brasil, Francia"
+                  value={teamSearch}
+                />
+              </label>
+              <label>
+                Fase
+                <select onChange={(event) => setPhaseFilter(event.target.value)} value={phaseFilter}>
+                  {phases.map((phase) => <option key={phase} value={phase}>{phase === 'Semifinal' ? 'Semifinales' : phase}</option>)}
+                </select>
+              </label>
+              {phaseFilter === 'Fase de grupos' && (
+                <label>
+                  Grupo
+                  <select onChange={(event) => setGroupFilter(event.target.value)} value={groupFilter}>
+                    {groupOptions.map((group) => <option key={group} value={group}>{group}</option>)}
+                  </select>
+                </label>
+              )}
+            </div>
 
-        {phaseFilter === 'Fase de grupos' && groupFilter === 'Todos los grupos' && !showingTeamResults ? (
-          <div className="accordion-list">
-            {groupedMatches.map((group, index) => (
-              <details className="accordion-panel" key={group.groupLabel} open={index < 2}>
-                <summary>{group.groupLabel} <span>{group.matches.length} partidos</span></summary>
-                <div className="prediction-grid compact-grid">
-                  {group.matches.map(renderMatchCard)}
-                </div>
-              </details>
-            ))}
-          </div>
+            {showingTeamResults && (
+              <p className="muted">
+                {visibleGroupMatches.length} partidos encontrados para “{teamSearch}”.
+              </p>
+            )}
+
+            {phaseFilter === 'Fase de grupos' && groupFilter === 'Todos los grupos' && !showingTeamResults ? (
+              <div className="accordion-list">
+                {groupedMatches.map((group, index) => (
+                  <details className="accordion-panel" key={group.groupLabel} open={index < 2}>
+                    <summary>{group.groupLabel} <span>{group.matches.length} partidos</span></summary>
+                    <div className="prediction-grid compact-grid">
+                      {group.matches.map(renderMatchCard)}
+                    </div>
+                  </details>
+                ))}
+              </div>
+            ) : (
+              <div className="prediction-grid compact-grid">
+                {visibleGroupMatches.map(renderMatchCard)}
+              </div>
+            )}
+            {!visibleGroupMatches.length && <p className="muted">No hay predicciones para esa selección con los filtros actuales.</p>}
+          </>
         ) : (
-          <div className="prediction-grid compact-grid">
-            {visibleGroupMatches.map(renderMatchCard)}
+          <div className="prediction-bracket-view">
+            <div className="bracket-toolbar">
+              <label>
+                Buscar selección o partido
+                <input
+                  onChange={(event) => setTeamSearch(event.target.value)}
+                  placeholder="Ej: Colombia, #73, semifinal"
+                  value={teamSearch}
+                />
+              </label>
+              <label>
+                Fase
+                <select onChange={(event) => setBracketPhaseFilter(event.target.value)} value={bracketPhaseFilter}>
+                  <option>Todas las llaves</option>
+                  {bracketPhases.map((phase) => <option key={phase} value={phase}>{phase === 'Semifinal' ? 'Semifinales' : phase}</option>)}
+                </select>
+              </label>
+            </div>
+
+            {visibleBracketRounds.length ? (
+              <div className="bracket-board responsive-bracket-board">
+                {visibleBracketRounds.map((section) => (
+                  <div className="bracket-round" key={section.stage}>
+                    <h4>{section.stage === 'Semifinal' ? 'Semifinales' : section.stage}</h4>
+                    {section.matches.map(renderPredictionBracketMatch)}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="muted">No hay llaves de este participante con esos filtros.</p>
+            )}
           </div>
         )}
-        {!visibleGroupMatches.length && <p className="muted">No hay predicciones para esa selección con los filtros actuales.</p>}
       </div>
 
       <div className="panel">

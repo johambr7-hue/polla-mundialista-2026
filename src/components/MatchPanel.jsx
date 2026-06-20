@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Edit2, Plus, Save, Trash2, X } from 'lucide-react';
-import { displayTeam } from '../utils/localization';
+import { displayTeam, getTeamFlag } from '../utils/localization';
 
 const emptyMatch = {
   matchNumber: '',
@@ -20,17 +20,219 @@ const emptyMatch = {
 };
 
 const stageOptions = ['Fase de grupos', 'Dieciseisavos', 'Octavos', 'Cuartos', 'Semifinal', 'Final', 'Tercer puesto'];
+const knockoutStageOptions = ['Dieciseisavos', 'Octavos', 'Cuartos', 'Semifinal', 'Tercer puesto', 'Final'];
 const classificationMethods = [
   ['regulation', 'Tiempo reglamentario'],
   ['extraTime', 'Prórroga'],
   ['penalties', 'Penales']
 ];
+const classificationMethodLabels = Object.fromEntries(classificationMethods);
+
+const normalizeSearch = (value) =>
+  String(value ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+
+const isSameTeam = (a, b) => normalizeSearch(displayTeam(a) || a) === normalizeSearch(displayTeam(b) || b);
+const normalizeGroupKey = (group) => {
+  const value = String(group ?? '').trim();
+  const match = value.match(/([A-L])$/i);
+  return match ? match[1].toUpperCase() : value;
+};
+
+const hasScoreValue = (value) => value !== '' && value !== null && value !== undefined;
+const hasOfficialScore = (match) => hasScoreValue(match.realHomeScore) && hasScoreValue(match.realAwayScore);
+const isOfficialComplete = (match) => match.status === 'jugado' && hasOfficialScore(match);
+
+const emptyStanding = (team, group) => ({
+  team,
+  group,
+  played: 0,
+  won: 0,
+  drawn: 0,
+  lost: 0,
+  goalsFor: 0,
+  goalsAgainst: 0,
+  goalDifference: 0,
+  points: 0
+});
+
+const compareStandings = (a, b) =>
+  b.points - a.points ||
+  b.goalDifference - a.goalDifference ||
+  b.goalsFor - a.goalsFor ||
+  displayTeam(a.team).localeCompare(displayTeam(b.team), 'es');
+
+const addGroupResult = (home, away, homeGoals, awayGoals) => {
+  home.played += 1;
+  away.played += 1;
+  home.goalsFor += homeGoals;
+  home.goalsAgainst += awayGoals;
+  home.goalDifference = home.goalsFor - home.goalsAgainst;
+  away.goalsFor += awayGoals;
+  away.goalsAgainst += homeGoals;
+  away.goalDifference = away.goalsFor - away.goalsAgainst;
+
+  if (homeGoals > awayGoals) {
+    home.won += 1;
+    away.lost += 1;
+    home.points += 3;
+  } else if (homeGoals < awayGoals) {
+    away.won += 1;
+    home.lost += 1;
+    away.points += 3;
+  } else {
+    home.drawn += 1;
+    away.drawn += 1;
+    home.points += 1;
+    away.points += 1;
+  }
+};
+
+const buildOfficialGroupTables = (matches) => {
+  const groups = new Map();
+
+  matches
+    .filter((match) => match.stage === 'Fase de grupos')
+    .forEach((match) => {
+      const group = normalizeGroupKey(match.group) || 'Sin grupo';
+      if (!groups.has(group)) {
+        groups.set(group, { completed: 0, rows: new Map(), total: 0 });
+      }
+
+      const groupData = groups.get(group);
+      groupData.total += 1;
+      [match.homeTeam, match.awayTeam].forEach((team) => {
+        if (team && !groupData.rows.has(team)) {
+          groupData.rows.set(team, emptyStanding(team, group));
+        }
+      });
+
+      if (!isOfficialComplete(match)) return;
+
+      const home = groupData.rows.get(match.homeTeam);
+      const away = groupData.rows.get(match.awayTeam);
+      if (!home || !away) return;
+
+      addGroupResult(home, away, Number(match.realHomeScore), Number(match.realAwayScore));
+      groupData.completed += 1;
+    });
+
+  return Object.fromEntries(
+    [...groups.entries()].map(([group, groupData]) => [
+      group,
+      {
+        complete: groupData.total > 0 && groupData.completed === groupData.total,
+        standings: [...groupData.rows.values()].sort(compareStandings)
+      }
+    ])
+  );
+};
+
+const buildOfficialQualifiers = (groupTables) => {
+  const qualifiers = {};
+  const thirdPlaces = [];
+  const groups = Object.entries(groupTables);
+
+  groups.forEach(([group, table]) => {
+    if (!table.complete || table.standings.length < 3) return;
+
+    qualifiers[`Winner Group ${group}`] = table.standings[0].team;
+    qualifiers[`Runner-up Group ${group}`] = table.standings[1].team;
+    thirdPlaces.push(table.standings[2]);
+  });
+
+  const allGroupsComplete = groups.length >= 12 && groups.every(([, table]) => table.complete);
+  const bestThirds = allGroupsComplete ? [...thirdPlaces].sort(compareStandings).slice(0, 8) : [];
+
+  return { bestThirds, qualifiers };
+};
+
+const resolveBestThird = (placeholder, context) => {
+  const bestThird = String(placeholder ?? '').match(/^Best 3rd Group ([A-L/]+)$/i);
+  if (!bestThird) return '';
+
+  const candidateGroups = bestThird[1].split('/').map((group) => group.toUpperCase());
+  const selected = context.bestThirds.find(
+    (standing) => candidateGroups.includes(String(standing.group).toUpperCase()) && !context.usedBestThirdGroups.has(standing.group)
+  );
+
+  if (!selected) return '';
+  context.usedBestThirdGroups.add(selected.group);
+  return selected.team;
+};
+
+const resolveOfficialPlaceholder = (value, context) => {
+  const team = String(value ?? '').trim();
+  const winnerMatch = team.match(/^Winner Match (\d+)$/i);
+  if (winnerMatch) return context.winners[winnerMatch[1]] ?? '';
+
+  const loserMatch = team.match(/^Loser Match (\d+)$/i);
+  if (loserMatch) return context.losers[loserMatch[1]] ?? '';
+
+  const bestThird = resolveBestThird(team, context);
+  if (bestThird) return bestThird;
+
+  return context.qualifiers[team] ?? '';
+};
+
+const getOfficialWinner = (match, homeTeam, awayTeam) => {
+  if (match.qualifiedTeam) return match.qualifiedTeam;
+  if (!isOfficialComplete(match)) return '';
+
+  const homeScore = Number(match.realHomeScore);
+  const awayScore = Number(match.realAwayScore);
+  if (homeScore > awayScore) return homeTeam;
+  if (homeScore < awayScore) return awayTeam;
+  return '';
+};
+
+const getOfficialLoser = (winner, homeTeam, awayTeam) => {
+  if (!winner) return '';
+  if (isSameTeam(winner, homeTeam)) return awayTeam;
+  if (isSameTeam(winner, awayTeam)) return homeTeam;
+  return '';
+};
+
+const buildOfficialBracketRounds = (matches) => {
+  const groupTables = buildOfficialGroupTables(matches);
+  const context = {
+    ...buildOfficialQualifiers(groupTables),
+    losers: {},
+    usedBestThirdGroups: new Set(),
+    winners: {}
+  };
+  const rounds = {};
+
+  [...matches]
+    .filter((match) => match.stage !== 'Fase de grupos')
+    .sort((a, b) => Number(a.matchNumber ?? 999) - Number(b.matchNumber ?? 999))
+    .forEach((match) => {
+      const homeTeam = resolveOfficialPlaceholder(match.homeTeam, context) || match.homeTeam;
+      const awayTeam = resolveOfficialPlaceholder(match.awayTeam, context) || match.awayTeam;
+      const winner = getOfficialWinner(match, homeTeam, awayTeam);
+      const loser = getOfficialLoser(winner, homeTeam, awayTeam);
+      const matchKey = String(match.matchNumber ?? match.id);
+
+      context.winners[matchKey] = winner;
+      context.losers[matchKey] = loser;
+      rounds[match.stage] = [
+        ...(rounds[match.stage] ?? []),
+        { ...match, awayTeam, homeTeam, loser, winner }
+      ];
+    });
+
+  return rounds;
+};
 
 function MatchPanel({ isAdmin, matches, predictions, updateMatches, updatePredictions }) {
   const [activeView, setActiveView] = useState('list');
   const [form, setForm] = useState(emptyMatch);
   const [editingId, setEditingId] = useState(null);
   const [filters, setFilters] = useState({ date: '', group: 'all', stage: 'Fase de grupos' });
+  const [bracketFilters, setBracketFilters] = useState({ query: '', stage: 'all' });
   const [scoreDrafts, setScoreDrafts] = useState({});
 
   const filteredMatches = useMemo(
@@ -69,6 +271,35 @@ function MatchPanel({ isAdmin, matches, predictions, updateMatches, updatePredic
         }))
         .filter((item) => item.matches.length),
     [filteredMatches]
+  );
+
+  const officialBracketRounds = useMemo(() => buildOfficialBracketRounds(matches), [matches]);
+  const visibleBracketRounds = useMemo(
+    () =>
+      knockoutStageOptions
+        .map((stage) => ({
+          stage,
+          matches: (officialBracketRounds[stage] ?? []).filter((match) => {
+            const query = normalizeSearch(bracketFilters.query);
+            if (bracketFilters.stage !== 'all' && match.stage !== bracketFilters.stage) return false;
+            if (!query) return true;
+
+            const searchableText = [
+              `#${match.matchNumber}`,
+              match.matchNumber,
+              match.stage,
+              match.homeTeam,
+              match.awayTeam,
+              match.winner,
+              match.loser
+            ]
+              .map((value) => normalizeSearch(displayTeam(value) || value))
+              .join(' ');
+            return searchableText.includes(query);
+          })
+        }))
+        .filter((section) => section.matches.length),
+    [bracketFilters, officialBracketRounds]
   );
 
   const submitMatch = (event) => {
@@ -255,6 +486,37 @@ function MatchPanel({ isAdmin, matches, predictions, updateMatches, updatePredic
     </article>
   );
 
+  const renderBracketMatch = (match) => {
+    const homeIsWinner = isSameTeam(match.winner, match.homeTeam);
+    const awayIsWinner = isSameTeam(match.winner, match.awayTeam);
+    const officialScore = hasOfficialScore(match)
+      ? `${match.realHomeScore} - ${match.realAwayScore}`
+      : 'Por definir';
+
+    return (
+      <article className={`bracket-match real-bracket-match ${match.winner ? 'decided' : ''}`} key={match.id ?? `${match.stage}-${match.matchNumber}`}>
+        <span>#{match.matchNumber || '-'} · {match.date || 'Fecha por definir'} · {match.time || 'TBD'}</span>
+        <div className="bracket-team-row-grid">
+          <div className={homeIsWinner ? 'bracket-team-row winner' : 'bracket-team-row'}>
+            <span>{getTeamFlag(match.homeTeam)}</span>
+            <strong>{displayTeam(match.homeTeam)}</strong>
+            <em>{hasScoreValue(match.realHomeScore) ? match.realHomeScore : '-'}</em>
+          </div>
+          <div className={awayIsWinner ? 'bracket-team-row winner' : 'bracket-team-row'}>
+            <span>{getTeamFlag(match.awayTeam)}</span>
+            <strong>{displayTeam(match.awayTeam)}</strong>
+            <em>{hasScoreValue(match.realAwayScore) ? match.realAwayScore : '-'}</em>
+          </div>
+        </div>
+        <div className="bracket-status-note">
+          <span className="bracket-score-chip">{officialScore}</span>
+          <strong>{match.winner ? `Clasifica ${displayTeam(match.winner)}` : 'Clasificado por definir'}</strong>
+        </div>
+        <small>{match.classificationMethod ? classificationMethodLabels[match.classificationMethod] : 'Método por definir'}</small>
+      </article>
+    );
+  };
+
   return (
     <section className="stack-list">
       <div className="panel">
@@ -272,6 +534,13 @@ function MatchPanel({ isAdmin, matches, predictions, updateMatches, updatePredic
             type="button"
           >
             Ver partidos
+          </button>
+          <button
+            className={activeView === 'bracket' ? 'tab-button active' : 'tab-button'}
+            onClick={() => setActiveView('bracket')}
+            type="button"
+          >
+            Llaves
           </button>
           <button
             className={activeView === 'form' ? 'tab-button active' : 'tab-button'}
@@ -494,6 +763,54 @@ function MatchPanel({ isAdmin, matches, predictions, updateMatches, updatePredic
             {filteredMatches.map(renderMatchCard)}
             {!filteredMatches.length && <p className="muted">No hay partidos con estos filtros.</p>}
           </div>
+        )}
+      </div>
+      )}
+
+      {activeView === 'bracket' && (
+      <div className="panel">
+        <div className="panel-heading">
+          <div>
+            <h3>Llaves reales</h3>
+            <p className="muted">Consulta cómo se van formando los cruces oficiales con los resultados ingresados.</p>
+          </div>
+          <span className="counter">{visibleBracketRounds.reduce((total, section) => total + section.matches.length, 0)}</span>
+        </div>
+
+        <div className="bracket-toolbar">
+          <label>
+            Buscar selección o partido
+            <input
+              onChange={(event) => setBracketFilters({ ...bracketFilters, query: event.target.value })}
+              placeholder="Ej: Colombia, #73, final"
+              value={bracketFilters.query}
+            />
+          </label>
+          <label>
+            Fase
+            <select
+              onChange={(event) => setBracketFilters({ ...bracketFilters, stage: event.target.value })}
+              value={bracketFilters.stage}
+            >
+              <option value="all">Todas las llaves</option>
+              {knockoutStageOptions.map((stage) => (
+                <option key={stage} value={stage}>{stage === 'Semifinal' ? 'Semifinales' : stage}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        {visibleBracketRounds.length ? (
+          <div className="bracket-board responsive-bracket-board">
+            {visibleBracketRounds.map((section) => (
+              <div className="bracket-round" key={section.stage}>
+                <h4>{section.stage === 'Semifinal' ? 'Semifinales' : section.stage}</h4>
+                {section.matches.map(renderBracketMatch)}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="muted">Todavía no hay llaves con esos filtros.</p>
         )}
       </div>
       )}

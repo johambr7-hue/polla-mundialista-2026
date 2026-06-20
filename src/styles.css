@@ -1988,6 +1988,112 @@ th {
   font-weight: 900;
 }
 
+.prediction-view-tabs {
+  margin-top: 2px;
+}
+
+.bracket-toolbar {
+  align-items: end;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(240px, 1fr) minmax(190px, 260px);
+  margin-bottom: 16px;
+}
+
+.responsive-bracket-board {
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  overflow: visible;
+}
+
+.real-bracket-match,
+.prediction-bracket-match {
+  background:
+    linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border-color: #dde5f1;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+}
+
+.real-bracket-match.decided,
+.prediction-bracket-match.decided {
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+.bracket-team-row-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.bracket-team-row {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #e5e9f1;
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: 9px;
+}
+
+.bracket-team-row span {
+  display: grid;
+  font-size: 1.25rem;
+  height: 28px;
+  place-items: center;
+  width: 28px;
+}
+
+.bracket-team-row strong {
+  overflow-wrap: anywhere;
+}
+
+.bracket-team-row em {
+  background: #eef2f7;
+  border-radius: 8px;
+  color: #172033;
+  font-style: normal;
+  font-weight: 1000;
+  min-width: 34px;
+  padding: 5px 8px;
+  text-align: center;
+}
+
+.bracket-team-row.winner {
+  background: #ecfdf3;
+  border-color: rgba(34, 197, 94, 0.45);
+}
+
+.bracket-team-row.winner em {
+  background: #22c55e;
+  color: #fff;
+}
+
+.bracket-status-note {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.bracket-status-note strong {
+  color: #334155;
+  font-size: 0.9rem;
+}
+
+.bracket-score-chip {
+  background: #eaf1ff;
+  border: 1px solid #c7d7fe;
+  border-radius: 999px;
+  color: #1d4ed8;
+  font-size: 0.82rem;
+  font-weight: 1000;
+  padding: 5px 9px;
+}
+
+.bracket-match small {
+  color: #667085;
+  font-weight: 800;
+}
+
 .visual-bracket {
   align-items: start;
   grid-template-columns: repeat(5, minmax(220px, 1fr));
@@ -2839,7 +2945,8 @@ th {
   .chart-match-filters,
   .match-picker-list,
   .podium-grid,
-  .match-filters {
+  .match-filters,
+  .bracket-toolbar {
     grid-template-columns: 1fr;
   }
 
@@ -2868,6 +2975,11 @@ th {
   .bracket-board {
     grid-template-columns: repeat(5, minmax(220px, 1fr));
     overflow-x: auto;
+  }
+
+  .responsive-bracket-board {
+    grid-template-columns: minmax(0, 1fr);
+    overflow: visible;
   }
 
   .visual-bracket .bracket-round:not(:last-child) .bracket-match::after {
