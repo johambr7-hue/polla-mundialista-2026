@@ -3348,17 +3348,35 @@ th {
   }
 
   .today-distribution-row {
-    align-items: stretch;
-    grid-template-columns: 1fr;
+    align-items: center;
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
   .today-score-label {
-    align-items: flex-start;
-    flex-direction: column;
+    align-items: center;
+    flex-direction: row;
+    gap: 5px;
+    min-width: 0;
   }
 
   .today-score-label .score-team-score strong {
-    max-width: 100%;
+    max-width: 96px;
+  }
+
+  .today-score-label small {
+    flex-basis: 100%;
+    width: fit-content;
+  }
+
+  .today-distribution-row .bar-track {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .today-distribution-row > strong {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
   }
 
   .filter-bar,
