@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { getPredictionDistribution } from '../utils/scoring';
 import { displayMatch, displayTeam, getTeamFlag } from '../utils/localization';
 import { getExactScoreDetails } from '../utils/exactScoreDetails';
+import { getBogotaDateKey, getMatchBogotaDateKey, getMatchBogotaTime, getMatchSortKey } from '../utils/matchDate';
 
 const palette = ['#2563eb', '#16a34a', '#f59e0b', '#dc2626', '#7c3aed', '#0891b2'];
 const normalizeSearch = (value) =>
@@ -12,33 +13,6 @@ const normalizeSearch = (value) =>
     .trim();
 
 const formatScore = (score) => String(score || '-').replace('-', ' - ');
-const getLocalDateKey = (date = new Date()) =>
-  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-
-const getMatchDateTime = (match) => {
-  if (!match?.date) return null;
-  const time = match.time && match.time !== 'TBD' ? match.time : '00:00';
-  const date = new Date(`${match.date}T${time}:00Z`);
-  return Number.isNaN(date.getTime()) ? null : date;
-};
-
-const getMatchLocalDateKey = (match) => {
-  const date = getMatchDateTime(match);
-  return date ? getLocalDateKey(date) : match?.date ?? '';
-};
-
-const getMatchLocalTime = (match) => {
-  const date = getMatchDateTime(match);
-  if (!date) return match?.time || 'Hora por definir';
-  return date.toLocaleTimeString('es-CO', {
-    hour: '2-digit',
-    hour12: false,
-    minute: '2-digit'
-  });
-};
-
-const getMatchSortKey = (match) =>
-  `${match.date ?? ''} ${match.time ?? ''} ${String(match.matchNumber ?? '').padStart(3, '0')}`;
 
 const getScoreParts = (score) => {
   const [homeGoals = '-', awayGoals = '-'] = String(score ?? '').split('-');
@@ -120,7 +94,7 @@ function Bar({ children, color, expanded = false, label, max, onClick, value }) 
 }
 
 function ChartsPanel({ matches, participants, predictions, ranking }) {
-  const todayKey = useMemo(() => getLocalDateKey(), []);
+  const todayKey = useMemo(() => getBogotaDateKey(), []);
   const matchesWithPredictions = useMemo(
     () =>
       matches
@@ -154,7 +128,7 @@ function ChartsPanel({ matches, participants, predictions, ranking }) {
     });
   }, [groupFilter, matchSearch, matchesWithPredictions, stageFilter]);
   const todayMatches = useMemo(
-    () => filteredMatches.filter((item) => getMatchLocalDateKey(item) === todayKey),
+    () => filteredMatches.filter((item) => getMatchBogotaDateKey(item) === todayKey),
     [filteredMatches, todayKey]
   );
   const showingTodaySuggestions =
@@ -287,7 +261,7 @@ function ChartsPanel({ matches, participants, predictions, ranking }) {
               >
                 <strong>#{item.matchNumber ?? '-'}</strong>
                 <span>{displayMatch(item)}</span>
-                {getMatchLocalDateKey(item) === todayKey && <small>Hoy · {getMatchLocalTime(item)}</small>}
+                {getMatchBogotaDateKey(item) === todayKey && <small>Hoy · {getMatchBogotaTime(item)}</small>}
               </button>
             ))}
           </div>

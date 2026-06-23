@@ -4,6 +4,7 @@ import {
   CalendarDays,
   Download,
   FileText,
+  Flame,
   Lock,
   LogIn,
   Upload,
@@ -23,6 +24,7 @@ import PredictionPanel from './components/PredictionPanel';
 import RankingTable from './components/RankingTable';
 import RulesPanel from './components/RulesPanel';
 import SearchPanel from './components/SearchPanel';
+import TodayMatchesPanel from './components/TodayMatchesPanel';
 import TournamentPredictionPanel from './components/TournamentPredictionPanel';
 import { defaultSettings } from './data/sampleData';
 import {
@@ -39,6 +41,7 @@ import { buildRanking, calculateCollection, calculatePrizes } from './utils/scor
 
 const tabs = [
   { id: 'ranking', label: 'Tabla', icon: Trophy },
+  { id: 'hoy', label: 'Partidos de hoy', icon: Flame, featured: true },
   { id: 'polla', label: 'Polla completa', icon: Trophy },
   { id: 'predicciones', label: 'Predicciones', icon: CalendarDays },
   { id: 'participantes', label: 'Participantes', icon: Users },
@@ -377,7 +380,11 @@ function App() {
             const Icon = tab.icon;
             return (
               <button
-                className={activeTab === tab.id ? 'nav-item active' : 'nav-item'}
+                className={[
+                  'nav-item',
+                  tab.featured ? 'featured-today' : '',
+                  activeTab === tab.id ? 'active' : ''
+                ].filter(Boolean).join(' ')}
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 type="button"
@@ -467,6 +474,13 @@ function App() {
             prizes={prizes}
             ranking={ranking}
             matches={state.matches}
+          />
+        )}
+        {!isLoadingData && activeTab === 'hoy' && (
+          <TodayMatchesPanel
+            matches={state.matches}
+            participants={state.participants}
+            predictions={state.predictions}
           />
         )}
         {activeTab === 'polla' && (
