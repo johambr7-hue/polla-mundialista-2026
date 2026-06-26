@@ -122,8 +122,7 @@ const buildOfficialQualifiers = (groupTables) => {
   });
 
   const allGroupsComplete = groups.length >= 12 && groups.every(([, table]) => table.complete);
-  const rankedThirdPlaces = [...thirdPlaces].sort(compareStandings);
-  const bestThirds = allGroupsComplete ? rankedThirdPlaces.slice(0, 8) : rankedThirdPlaces;
+  const bestThirds = allGroupsComplete ? [...thirdPlaces].sort(compareStandings).slice(0, 8) : [];
 
   return { bestThirds, qualifiers };
 };
@@ -174,6 +173,25 @@ const getOfficialLoser = (winner, homeTeam, awayTeam) => {
   return '';
 };
 
+const confirmedOfficialMatchTeams = {
+  73: {
+    homeTeam: 'South Africa',
+    awayTeam: 'Canada'
+  },
+  75: {
+    homeTeam: 'Netherlands',
+    awayTeam: 'Morocco'
+  },
+  76: {
+    homeTeam: 'Brazil',
+    awayTeam: 'Japan'
+  },
+  81: {
+    homeTeam: 'United States',
+    awayTeam: 'Bosnia and Herzegovina'
+  }
+};
+
 export const buildOfficialBracketRounds = (matches) => {
   const groupTables = buildOfficialGroupTables(matches);
   const context = {
@@ -188,8 +206,9 @@ export const buildOfficialBracketRounds = (matches) => {
     .filter((match) => match.stage !== 'Fase de grupos')
     .sort((a, b) => Number(a.matchNumber ?? 999) - Number(b.matchNumber ?? 999))
     .forEach((match) => {
-      const homeTeam = resolveOfficialPlaceholder(match.homeTeam, context) || match.homeTeam;
-      const awayTeam = resolveOfficialPlaceholder(match.awayTeam, context) || match.awayTeam;
+      const confirmedTeams = confirmedOfficialMatchTeams[Number(match.matchNumber)] ?? {};
+      const homeTeam = confirmedTeams.homeTeam || resolveOfficialPlaceholder(match.homeTeam, context) || match.homeTeam;
+      const awayTeam = confirmedTeams.awayTeam || resolveOfficialPlaceholder(match.awayTeam, context) || match.awayTeam;
       const winner = getOfficialWinner(match, homeTeam, awayTeam);
       const loser = getOfficialLoser(winner, homeTeam, awayTeam);
       const matchKey = String(match.matchNumber ?? match.id);

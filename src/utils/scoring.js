@@ -175,6 +175,12 @@ const isRealBracketKnown = (match) =>
   !isPlaceholderTeam(match.homeTeam) &&
   !isPlaceholderTeam(match.awayTeam);
 
+const getKnownKnockoutTeams = (match) =>
+  [match.homeTeam, match.awayTeam].filter((team) => team && !isPlaceholderTeam(team));
+
+const hasKnownKnockoutTeam = (match) =>
+  !isGroupStage(match.stage) && getKnownKnockoutTeams(match).length > 0;
+
 export const calculatePredictionBreakdown = (prediction, match, settings) => {
   const empty = {
     total: 0,
@@ -191,9 +197,10 @@ export const calculatePredictionBreakdown = (prediction, match, settings) => {
 
   const matchScorable = isMatchScorable(match);
   const realBracketKnown = isRealBracketKnown(match);
+  const knownKnockoutTeams = getKnownKnockoutTeams(match);
 
   if (isGroupStage(match.stage) && !matchScorable) return empty;
-  if (!isGroupStage(match.stage) && !realBracketKnown) return empty;
+  if (!isGroupStage(match.stage) && !hasKnownKnockoutTeam(match)) return empty;
 
   const phaseRules = settings.scoring[match.stage] ?? settings.scoring['Fase de grupos'];
   const predictedHome = Number(prediction.homeScore);
@@ -205,14 +212,16 @@ export const calculatePredictionBreakdown = (prediction, match, settings) => {
     : matchScorable && scoresMatchByTeam(prediction, match);
   const resultHit = matchScorable && outcome(predictedHome, predictedAway) === outcome(realHome, realAway);
   const predictedTeamsForMatch = getPredictedTeams(prediction, match);
-  const realTeamKeysForMatch = [teamKey(match.homeTeam), teamKey(match.awayTeam)].filter(Boolean);
-  const predictedTeamKeysForMatch = [teamKey(predictedTeamsForMatch.home), teamKey(predictedTeamsForMatch.away)].filter(Boolean);
-  const qualifiedTeamHitCount = !isGroupStage(match.stage) && realBracketKnown
+  const realTeamKeysForMatch = knownKnockoutTeams.map(teamKey).filter(Boolean);
+  const predictedTeamKeysForMatch = [teamKey(predictedTeamsForMatch.home), teamKey(predictedTeamsForMatch.away)]
+    .filter(Boolean)
+    .filter((team) => !isPlaceholderTeam(team));
+  const qualifiedTeamHitCount = !isGroupStage(match.stage) && hasKnownKnockoutTeam(match)
     ? new Set(predictedTeamKeysForMatch.filter((team) => realTeamKeysForMatch.includes(team))).size
     : 0;
   const qualifiedTeamHit = qualifiedTeamHitCount > 0;
   const baseBracketHit = isGroupStage(match.stage) ? true : isBracketHit(prediction, match);
-  const bracketHit = baseBracketHit;
+  const bracketHit = realBracketKnown && baseBracketHit;
 
   let total = 0;
 
@@ -222,7 +231,7 @@ export const calculatePredictionBreakdown = (prediction, match, settings) => {
   } else {
     if (qualifiedTeamHitCount) total += Number(phaseRules.qualifiedTeam ?? 0) * qualifiedTeamHitCount;
     if (bracketHit) total += phaseRules.bracket;
-    if (baseBracketHit && exactScoreHit) total += phaseRules.exactScore;
+    if (realBracketKnown && baseBracketHit && exactScoreHit) total += phaseRules.exactScore;
   }
 
   return {
@@ -230,9 +239,9 @@ export const calculatePredictionBreakdown = (prediction, match, settings) => {
     groupPoints: isGroupStage(match.stage) ? total : 0,
     knockoutPoints: isGroupStage(match.stage) ? 0 : total,
     finalPoints: 0,
-    exactScoreHit: baseBracketHit && exactScoreHit,
+    exactScoreHit: isGroupStage(match.stage) ? exactScoreHit : realBracketKnown && baseBracketHit && exactScoreHit,
     resultHit,
-    bracketHit: !isGroupStage(match.stage) && bracketHit,
+    bracketHit: !isGroupStage(match.stage) && realBracketKnown && bracketHit,
     qualifiedTeamHit
   };
 };
@@ -242,16 +251,17 @@ export const calculatePredictionPoints = (prediction, match, settings) =>
 
 export const calculateKnockoutPhaseBreakdown = (participantPredictions, matches, settings) => {
   const detailsByPhase = {};
-  const knockoutMatches = matches.filter((match) => isRealBracketKnown(match));
+  const knockoutMatches = matches.filter((match) => hasKnownKnockoutTeam(match));
 
   knockoutMatches.forEach((match) => {
     const phaseRules = settings.scoring[match.stage] ?? {};
-    const realTeams = [match.homeTeam, match.awayTeam].filter(Boolean);
+    const realTeams = getKnownKnockoutTeams(match);
     const realTeamKeys = realTeams.map(teamKey).filter(Boolean);
-    const realPairKey = pairKey(match.homeTeam, match.awayTeam);
+    const realBracketKnown = isRealBracketKnown(match);
+    const realPairKey = realBracketKnown ? pairKey(match.homeTeam, match.awayTeam) : '';
     const matchScorable = isMatchScorable(match);
 
-    if (!realPairKey || realTeamKeys.length !== 2) return;
+    if (!realTeamKeys.length) return;
 
     if (!detailsByPhase[match.stage]) {
       detailsByPhase[match.stage] = {
@@ -279,7 +289,9 @@ export const calculateKnockoutPhaseBreakdown = (participantPredictions, matches,
     phasePredictions.forEach((prediction) => {
       const predictionMatch = matches.find((item) => item.id === prediction.matchId) ?? match;
       const predictedTeams = getPredictedTeams(prediction, predictionMatch);
-      const predictedTeamKeys = [teamKey(predictedTeams.home), teamKey(predictedTeams.away)].filter(Boolean);
+      const predictedTeamKeys = [teamKey(predictedTeams.home), teamKey(predictedTeams.away)]
+        .filter(Boolean)
+        .filter((team) => !isPlaceholderTeam(team));
       const predictedPairKey = pairKey(predictedTeams.home, predictedTeams.away);
 
       predictedTeamKeys.forEach((predictedTeamKey) => {
@@ -295,7 +307,7 @@ export const calculateKnockoutPhaseBreakdown = (participantPredictions, matches,
         });
       });
 
-      if (predictedPairKey !== realPairKey || phaseDetail.countedBracketPairs.has(realPairKey)) return;
+      if (!realBracketKnown || predictedPairKey !== realPairKey || phaseDetail.countedBracketPairs.has(realPairKey)) return;
 
       phaseDetail.countedBracketPairs.add(realPairKey);
       phaseDetail.bracketHits += 1;
