@@ -189,6 +189,9 @@ const confirmedOfficialMatchTeams = {
   81: {
     homeTeam: 'United States',
     awayTeam: 'Bosnia and Herzegovina'
+  },
+  87: {
+    homeTeam: 'Argentina'
   }
 };
 
