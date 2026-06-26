@@ -270,8 +270,8 @@ function RankingTable({ collection, matches = [], onViewCharts, prizes, ranking 
                       </td>
                       <td>
                         <div className="ranking-detail-grid">
-                          <span><strong>{participant.knockoutPoints}</strong> elim.</span>
-                          <span><strong>{participant.finalPoints}</strong> finales</span>
+                          <span><strong>{participant.knockoutPoints}</strong> pts eliminatorias</span>
+                          <span><strong>{participant.finalPoints}</strong> pts finales</span>
                           <button
                             aria-expanded={knockoutExpanded && openKnockoutDetail.type === 'llave'}
                             className="ranking-detail-button"
@@ -285,7 +285,7 @@ function RankingTable({ collection, matches = [], onViewCharts, prizes, ranking 
                             title={`Ver llaves acertadas de ${participant.name}`}
                             type="button"
                           >
-                            <strong>{participant.bracketHits}</strong> llaves
+                            <strong>{participant.bracketHits}</strong> llaves acertadas
                           </button>
                           <button
                             aria-expanded={knockoutExpanded && openKnockoutDetail.type === 'clasificado'}
@@ -300,7 +300,7 @@ function RankingTable({ collection, matches = [], onViewCharts, prizes, ranking 
                             title={`Ver clasificados acertados de ${participant.name}`}
                             type="button"
                           >
-                            <strong>{participant.qualifiedTeamHits}</strong> clasif.
+                            <strong>{participant.qualifiedTeamHits}</strong> equipos clasificados
                           </button>
                         </div>
                       </td>
