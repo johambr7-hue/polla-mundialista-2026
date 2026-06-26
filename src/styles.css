@@ -1266,14 +1266,14 @@ th {
     content: "-";
   }
 
-  .mobile-rank-details > div {
+  .mobile-detail-grid {
     display: grid;
     gap: 8px;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     margin-top: 10px;
   }
 
-  .mobile-rank-details > div > span,
+  .mobile-detail-grid > span,
   .mobile-detail-action {
     background: #ffffff;
     border: 1px solid #e5e9f1;
@@ -1310,11 +1310,36 @@ th {
 
   .mobile-rank-details .knockout-hit-list {
     margin-top: 10px;
+    overflow: hidden;
+    width: 100%;
+  }
+
+  .mobile-rank-details .knockout-hit-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .mobile-rank-details .knockout-hit-phase > div {
+    grid-template-columns: 1fr;
+  }
+
+  .mobile-rank-details .knockout-hit-phase article {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .mobile-rank-details .knockout-hit-phase article strong {
+    overflow-wrap: anywhere;
+  }
+
+  .mobile-rank-details .knockout-hit-phase article em {
+    align-self: flex-start;
   }
 }
 
 @media (max-width: 420px) {
-  .mobile-rank-details > div {
+  .mobile-detail-grid {
     grid-template-columns: 1fr;
   }
 }

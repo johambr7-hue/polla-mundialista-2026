@@ -382,7 +382,7 @@ function RankingTable({ collection, matches = [], onViewCharts, prizes, ranking 
 
                 <details className="mobile-rank-details">
                   <summary>Ver detalles</summary>
-                  <div>
+                  <div className="mobile-detail-grid">
                     <span><strong>{trend}</strong> Tendencia</span>
                     <span><strong>{participant.groupPoints}</strong> Fase grupos</span>
                     <span><strong>{participant.knockoutPoints}</strong> Eliminatorias</span>
