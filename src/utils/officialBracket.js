@@ -122,7 +122,8 @@ const buildOfficialQualifiers = (groupTables) => {
   });
 
   const allGroupsComplete = groups.length >= 12 && groups.every(([, table]) => table.complete);
-  const bestThirds = allGroupsComplete ? [...thirdPlaces].sort(compareStandings).slice(0, 8) : [];
+  const rankedThirdPlaces = [...thirdPlaces].sort(compareStandings);
+  const bestThirds = allGroupsComplete ? rankedThirdPlaces.slice(0, 8) : rankedThirdPlaces;
 
   return { bestThirds, qualifiers };
 };
