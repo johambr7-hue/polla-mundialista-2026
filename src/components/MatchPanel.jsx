@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Edit2, Plus, Save, Trash2, X } from 'lucide-react';
 import { displayTeam, getTeamFlag } from '../utils/localization';
-import { buildOfficialBracketRounds } from '../utils/officialBracket';
+import { areOfficialKnockoutBracketsUnlocked, buildOfficialBracketRounds } from '../utils/officialBracket';
 
 const emptyMatch = {
   matchNumber: '',
@@ -88,32 +88,35 @@ function MatchPanel({ isAdmin, matches, predictions, updateMatches, updatePredic
   );
 
   const officialBracketRounds = useMemo(() => buildOfficialBracketRounds(matches), [matches]);
+  const officialKnockoutUnlocked = useMemo(() => areOfficialKnockoutBracketsUnlocked(matches), [matches]);
   const visibleBracketRounds = useMemo(
     () =>
-      knockoutStageOptions
-        .map((stage) => ({
-          stage,
-          matches: (officialBracketRounds[stage] ?? []).filter((match) => {
-            const query = normalizeSearch(bracketFilters.query);
-            if (bracketFilters.stage !== 'all' && match.stage !== bracketFilters.stage) return false;
-            if (!query) return true;
+      officialKnockoutUnlocked
+        ? knockoutStageOptions
+            .map((stage) => ({
+              stage,
+              matches: (officialBracketRounds[stage] ?? []).filter((match) => {
+                const query = normalizeSearch(bracketFilters.query);
+                if (bracketFilters.stage !== 'all' && match.stage !== bracketFilters.stage) return false;
+                if (!query) return true;
 
-            const searchableText = [
-              `#${match.matchNumber}`,
-              match.matchNumber,
-              match.stage,
-              match.homeTeam,
-              match.awayTeam,
-              match.winner,
-              match.loser
-            ]
-              .map((value) => normalizeSearch(displayTeam(value) || value))
-              .join(' ');
-            return searchableText.includes(query);
-          })
-        }))
-        .filter((section) => section.matches.length),
-    [bracketFilters, officialBracketRounds]
+                const searchableText = [
+                  `#${match.matchNumber}`,
+                  match.matchNumber,
+                  match.stage,
+                  match.homeTeam,
+                  match.awayTeam,
+                  match.winner,
+                  match.loser
+                ]
+                  .map((value) => normalizeSearch(displayTeam(value) || value))
+                  .join(' ');
+                return searchableText.includes(query);
+              })
+            }))
+            .filter((section) => section.matches.length)
+        : [],
+    [bracketFilters, officialBracketRounds, officialKnockoutUnlocked]
   );
 
   const submitMatch = (event) => {
@@ -624,7 +627,11 @@ function MatchPanel({ isAdmin, matches, predictions, updateMatches, updatePredic
           </div>
         </div>
 
-        {visibleBracketRounds.length ? (
+        {!officialKnockoutUnlocked ? (
+          <div className="notice">
+            Las llaves reales estarán ocultas hasta que estén definidos todos los cruces de dieciseisavos.
+          </div>
+        ) : visibleBracketRounds.length ? (
           <div className="bracket-board responsive-bracket-board">
             {visibleBracketRounds.map((section) => (
               <div className="bracket-round" key={section.stage}>

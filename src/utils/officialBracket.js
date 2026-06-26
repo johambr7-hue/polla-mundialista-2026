@@ -9,6 +9,15 @@ const normalizeSearch = (value) =>
 
 const isSameTeam = (a, b) => normalizeSearch(displayTeam(a) || a) === normalizeSearch(displayTeam(b) || b);
 
+const isPlaceholderTeam = (team) => {
+  const value = normalizeSearch(displayTeam(team) || team);
+  if (!value) return true;
+  return /^(tbd|a definir|por definir|sin definir|clasificado|ganador|winner|segundo|runner-up|mejor tercero|best 3rd|grupo)/.test(value);
+};
+
+const isFullTeamPairKnown = (match) =>
+  !isPlaceholderTeam(match.homeTeam) && !isPlaceholderTeam(match.awayTeam);
+
 const normalizeGroupKey = (group) => {
   const value = String(group ?? '').trim();
   const match = value.match(/([A-L])$/i);
@@ -195,7 +204,7 @@ const confirmedOfficialMatchTeams = {
   }
 };
 
-export const buildOfficialBracketRounds = (matches) => {
+const resolveBracketRounds = (matches, { applyConfirmedTeams = true, freezeRoundOf32Teams = false } = {}) => {
   const groupTables = buildOfficialGroupTables(matches);
   const context = {
     ...buildOfficialQualifiers(groupTables),
@@ -209,9 +218,14 @@ export const buildOfficialBracketRounds = (matches) => {
     .filter((match) => match.stage !== 'Fase de grupos')
     .sort((a, b) => Number(a.matchNumber ?? 999) - Number(b.matchNumber ?? 999))
     .forEach((match) => {
-      const confirmedTeams = confirmedOfficialMatchTeams[Number(match.matchNumber)] ?? {};
-      const homeTeam = confirmedTeams.homeTeam || resolveOfficialPlaceholder(match.homeTeam, context) || match.homeTeam;
-      const awayTeam = confirmedTeams.awayTeam || resolveOfficialPlaceholder(match.awayTeam, context) || match.awayTeam;
+      const confirmedTeams = applyConfirmedTeams ? confirmedOfficialMatchTeams[Number(match.matchNumber)] ?? {} : {};
+      const shouldFreezeTeams = freezeRoundOf32Teams && match.stage === 'Dieciseisavos';
+      const homeTeam = shouldFreezeTeams
+        ? match.homeTeam
+        : confirmedTeams.homeTeam || resolveOfficialPlaceholder(match.homeTeam, context) || match.homeTeam;
+      const awayTeam = shouldFreezeTeams
+        ? match.awayTeam
+        : confirmedTeams.awayTeam || resolveOfficialPlaceholder(match.awayTeam, context) || match.awayTeam;
       const winner = getOfficialWinner(match, homeTeam, awayTeam);
       const loser = getOfficialLoser(winner, homeTeam, awayTeam);
       const matchKey = String(match.matchNumber ?? match.id);
@@ -225,6 +239,28 @@ export const buildOfficialBracketRounds = (matches) => {
     });
 
   return rounds;
+};
+
+const areRoundOf32BracketsComplete = (rounds) => {
+  const roundOf32 = rounds.Dieciseisavos ?? [];
+  return roundOf32.length >= 16 && roundOf32.every(isFullTeamPairKnown);
+};
+
+export const areOfficialKnockoutBracketsUnlocked = (matches) => {
+  const unlockedPreview = resolveBracketRounds(matches, {
+    applyConfirmedTeams: true,
+    freezeRoundOf32Teams: false
+  });
+  return areRoundOf32BracketsComplete(unlockedPreview);
+};
+
+export const buildOfficialBracketRounds = (matches) => {
+  const officialKnockoutUnlocked = areOfficialKnockoutBracketsUnlocked(matches);
+
+  return resolveBracketRounds(matches, {
+    applyConfirmedTeams: officialKnockoutUnlocked,
+    freezeRoundOf32Teams: !officialKnockoutUnlocked
+  });
 };
 
 export const resolveOfficialMatches = (matches) => {
