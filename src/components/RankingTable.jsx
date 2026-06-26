@@ -37,6 +37,14 @@ const getDifferenceClass = (difference) => {
 
 const formatScore = (score) => String(score || '-').replace('-', ' - ');
 
+const getKnockoutDetails = (participant, type) =>
+  (participant?.pointsDetail ?? [])
+    .map((phaseDetail) => ({
+      phase: phaseDetail.fase,
+      items: (phaseDetail.detail ?? []).filter((detail) => detail.tipo === type)
+    }))
+    .filter((phaseDetail) => phaseDetail.items.length);
+
 function ExactHitList({ details }) {
   return (
     <div className="exact-hit-list">
@@ -57,8 +65,46 @@ function ExactHitList({ details }) {
   );
 }
 
+function KnockoutHitList({ participant, type }) {
+  const phaseDetails = getKnockoutDetails(participant, type);
+  const isBracket = type === 'llave';
+
+  return (
+    <div className="knockout-hit-list">
+      <div className="knockout-hit-header">
+        <strong>{isBracket ? 'Llaves acertadas' : 'Equipos clasificados acertados'}</strong>
+        <span>{participant.name}</span>
+      </div>
+      {phaseDetails.length ? (
+        phaseDetails.map((phaseDetail) => (
+          <section className="knockout-hit-phase" key={phaseDetail.phase}>
+            <h4>{phaseDetail.phase}</h4>
+            <div>
+              {phaseDetail.items.map((detail, index) => (
+                <article key={`${phaseDetail.phase}-${type}-${index}`}>
+                  <strong>
+                    {isBracket
+                      ? (detail.equipos ?? []).map((team) => displayTeam(team)).join(' vs ')
+                      : displayTeam(detail.equipo)}
+                  </strong>
+                  <em>{detail.puntos} pts</em>
+                </article>
+              ))}
+            </div>
+          </section>
+        ))
+      ) : (
+        <p className="muted">
+          {isBracket ? 'Todavía no tiene llaves acertadas.' : 'Todavía no tiene equipos clasificados acertados.'}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function RankingTable({ collection, matches = [], onViewCharts, prizes, ranking }) {
   const [openExactParticipantId, setOpenExactParticipantId] = useState('');
+  const [openKnockoutDetail, setOpenKnockoutDetail] = useState({ participantId: '', type: '' });
   const leaderPoints = ranking[0]?.totalPoints ?? 0;
   const podium = ranking.slice(0, 3);
   const maxPoints = Math.max(...ranking.map((participant) => participant.totalPoints), 1);
@@ -184,6 +230,7 @@ function RankingTable({ collection, matches = [], onViewCharts, prizes, ranking 
                 const exactLeader = maxExactScores > 0 && participant.exactScores === maxExactScores;
                 const exactDetails = getExactScoreDetails(participant);
                 const exactExpanded = openExactParticipantId === participant.id;
+                const knockoutExpanded = openKnockoutDetail.participantId === participant.id;
 
                 return (
                   <Fragment key={participant.id}>
@@ -225,8 +272,36 @@ function RankingTable({ collection, matches = [], onViewCharts, prizes, ranking 
                         <div className="ranking-detail-grid">
                           <span><strong>{participant.knockoutPoints}</strong> elim.</span>
                           <span><strong>{participant.finalPoints}</strong> finales</span>
-                          <span><strong>{participant.bracketHits}</strong> llaves</span>
-                          <span><strong>{participant.qualifiedTeamHits}</strong> clasif.</span>
+                          <button
+                            aria-expanded={knockoutExpanded && openKnockoutDetail.type === 'llave'}
+                            className="ranking-detail-button"
+                            onClick={() =>
+                              setOpenKnockoutDetail((current) =>
+                                current.participantId === participant.id && current.type === 'llave'
+                                  ? { participantId: '', type: '' }
+                                  : { participantId: participant.id, type: 'llave' }
+                              )
+                            }
+                            title={`Ver llaves acertadas de ${participant.name}`}
+                            type="button"
+                          >
+                            <strong>{participant.bracketHits}</strong> llaves
+                          </button>
+                          <button
+                            aria-expanded={knockoutExpanded && openKnockoutDetail.type === 'clasificado'}
+                            className="ranking-detail-button"
+                            onClick={() =>
+                              setOpenKnockoutDetail((current) =>
+                                current.participantId === participant.id && current.type === 'clasificado'
+                                  ? { participantId: '', type: '' }
+                                  : { participantId: participant.id, type: 'clasificado' }
+                              )
+                            }
+                            title={`Ver clasificados acertados de ${participant.name}`}
+                            type="button"
+                          >
+                            <strong>{participant.qualifiedTeamHits}</strong> clasif.
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -234,6 +309,13 @@ function RankingTable({ collection, matches = [], onViewCharts, prizes, ranking 
                       <tr className="ranking-expanded-row">
                         <td colSpan="8">
                           <ExactHitList details={exactDetails} />
+                        </td>
+                      </tr>
+                    )}
+                    {knockoutExpanded && (
+                      <tr className="ranking-expanded-row">
+                        <td colSpan="8">
+                          <KnockoutHitList participant={participant} type={openKnockoutDetail.type} />
                         </td>
                       </tr>
                     )}
@@ -251,6 +333,7 @@ function RankingTable({ collection, matches = [], onViewCharts, prizes, ranking 
             const exactLeader = maxExactScores > 0 && participant.exactScores === maxExactScores;
             const exactDetails = getExactScoreDetails(participant);
             const exactExpanded = openExactParticipantId === participant.id;
+            const knockoutExpanded = openKnockoutDetail.participantId === participant.id;
 
             return (
               <article className={podiumItem ? `ranking-mobile-card ${podiumItem.className}` : 'ranking-mobile-card'} key={participant.id}>
@@ -304,9 +387,38 @@ function RankingTable({ collection, matches = [], onViewCharts, prizes, ranking 
                     <span><strong>{participant.groupPoints}</strong> Fase grupos</span>
                     <span><strong>{participant.knockoutPoints}</strong> Eliminatorias</span>
                     <span><strong>{participant.finalPoints}</strong> Resultados finales</span>
-                    <span><strong>{participant.bracketHits}</strong> Llaves acertadas</span>
-                    <span><strong>{participant.qualifiedTeamHits}</strong> Equipos clasificados</span>
+                    <button
+                      aria-expanded={knockoutExpanded && openKnockoutDetail.type === 'llave'}
+                      className="mobile-detail-action"
+                      onClick={() =>
+                        setOpenKnockoutDetail((current) =>
+                          current.participantId === participant.id && current.type === 'llave'
+                            ? { participantId: '', type: '' }
+                            : { participantId: participant.id, type: 'llave' }
+                        )
+                      }
+                      type="button"
+                    >
+                      <strong>{participant.bracketHits}</strong> Llaves acertadas
+                    </button>
+                    <button
+                      aria-expanded={knockoutExpanded && openKnockoutDetail.type === 'clasificado'}
+                      className="mobile-detail-action"
+                      onClick={() =>
+                        setOpenKnockoutDetail((current) =>
+                          current.participantId === participant.id && current.type === 'clasificado'
+                            ? { participantId: '', type: '' }
+                            : { participantId: participant.id, type: 'clasificado' }
+                        )
+                      }
+                      type="button"
+                    >
+                      <strong>{participant.qualifiedTeamHits}</strong> Equipos clasificados
+                    </button>
                   </div>
+                  {knockoutExpanded && (
+                    <KnockoutHitList participant={participant} type={openKnockoutDetail.type} />
+                  )}
                 </details>
               </article>
             );
