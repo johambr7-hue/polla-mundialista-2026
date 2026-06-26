@@ -37,7 +37,9 @@ import {
   saveStateSection
 } from './services/supabaseService';
 import { downloadCsv } from './utils/exportCsv';
+import { resolveOfficialMatches } from './utils/officialBracket';
 import { buildRanking, calculateCollection, calculatePrizes } from './utils/scoring';
+import { buildBracket } from './utils/tournament';
 
 const tabs = [
   { id: 'ranking', label: 'Tabla', icon: Trophy },
@@ -87,6 +89,64 @@ const enrichPredictionsForSupabase = (predictions, matches) =>
       predictedAwayTeam: prediction.predictedAwayTeam ?? match?.awayTeam ?? ''
     };
   });
+
+const predictionKey = (prediction) => `${prediction.participantId}|${prediction.matchId}`;
+
+const predictionsFromTournamentEntries = (tournamentEntries, sourceMatches, scoringMatches) => {
+  const sourceMatchByNumber = new Map(sourceMatches.map((match) => [String(match.matchNumber), match]));
+  const scoringMatchByNumber = new Map(scoringMatches.map((match) => [String(match.matchNumber), match]));
+
+  return Object.entries(tournamentEntries ?? {}).flatMap(([participantId, entry]) => {
+    const projectedMatches = Object.values(buildBracket(sourceMatches, entry).rounds ?? {}).flat();
+    const projectedMatchByNumber = new Map(projectedMatches.map((match) => [String(match.matchNumber), match]));
+
+    return Object.entries(entry?.matchPredictions ?? {}).flatMap(([matchNumber, prediction]) => {
+      const sourceMatch = sourceMatchByNumber.get(String(matchNumber));
+      const scoringMatch = scoringMatchByNumber.get(String(matchNumber)) ?? sourceMatch;
+      if (!sourceMatch || !scoringMatch) return [];
+
+      const projectedMatch = projectedMatchByNumber.get(String(matchNumber));
+      const isGroupStage = sourceMatch.stage === 'Fase de grupos';
+      return [
+        {
+          id: `entry-${participantId}-${scoringMatch.id}`,
+          participantId,
+          matchId: scoringMatch.id,
+          phase: prediction.phase ?? sourceMatch.stage ?? '',
+          groupName: prediction.groupName ?? sourceMatch.group ?? '',
+          homeScore: prediction.homeScore ?? '',
+          awayScore: prediction.awayScore ?? '',
+          qualifiedTeam: prediction.qualifiedTeam ?? '',
+          penaltyWinner: prediction.penaltyWinner ?? '',
+          predictedHomeTeam: prediction.predictedHomeTeam ?? (isGroupStage ? scoringMatch.homeTeam : projectedMatch?.homeTeam) ?? '',
+          predictedAwayTeam: prediction.predictedAwayTeam ?? (isGroupStage ? scoringMatch.awayTeam : projectedMatch?.awayTeam) ?? '',
+          createdAt: entry.submittedAt ?? ''
+        }
+      ];
+    });
+  });
+};
+
+const mergePredictionsForScoring = (predictions, tournamentEntries, sourceMatches, scoringMatches) => {
+  const merged = new Map();
+
+  predictions.forEach((prediction) => {
+    merged.set(predictionKey(prediction), prediction);
+  });
+
+  predictionsFromTournamentEntries(tournamentEntries, sourceMatches, scoringMatches).forEach((prediction) => {
+    const match = scoringMatches.find((item) => item.id === prediction.matchId);
+    const key = predictionKey(prediction);
+    const existing = merged.get(key);
+    const hasProjectedTeams = Boolean(prediction.predictedHomeTeam && prediction.predictedAwayTeam);
+
+    if (!existing || (match?.stage !== 'Fase de grupos' && hasProjectedTeams)) {
+      merged.set(key, { ...(existing ?? {}), ...prediction, id: existing?.id ?? prediction.id });
+    }
+  });
+
+  return [...merged.values()];
+};
 
 const formatError = (error, fallback) => {
   if (!error) return fallback;
@@ -145,17 +205,27 @@ function App() {
     loadData({ preferredParticipantId: '', showLoading: true });
   }, []);
 
+  const matchesForScoring = useMemo(
+    () => resolveOfficialMatches(state.matches),
+    [state.matches]
+  );
+
+  const predictionsForScoring = useMemo(
+    () => mergePredictionsForScoring(state.predictions, state.tournamentEntries, state.matches, matchesForScoring),
+    [state.predictions, state.tournamentEntries, state.matches, matchesForScoring]
+  );
+
   const ranking = useMemo(
     () =>
       buildRanking(
         state.participants,
-        state.matches,
-        state.predictions,
+        matchesForScoring,
+        predictionsForScoring,
         state.finalPredictions,
         state.finalResults,
         state.settings
       ),
-    [state.participants, state.matches, state.predictions, state.finalPredictions, state.finalResults, state.settings]
+    [state.participants, matchesForScoring, predictionsForScoring, state.finalPredictions, state.finalResults, state.settings]
   );
 
   const collection = useMemo(
@@ -473,7 +543,7 @@ function App() {
             onViewCharts={() => setActiveTab('graficas')}
             prizes={prizes}
             ranking={ranking}
-            matches={state.matches}
+            matches={matchesForScoring}
           />
         )}
         {!isLoadingData && activeTab === 'hoy' && (
