@@ -527,7 +527,7 @@ function App() {
         {!isLoadingData && (
           <GlobalDashboard
             collection={collection}
-            matches={state.matches}
+            matches={matchesForScoring}
             participants={state.participants}
             ranking={ranking}
           />
@@ -548,7 +548,7 @@ function App() {
         )}
         {!isLoadingData && activeTab === 'hoy' && (
           <TodayMatchesPanel
-            matches={state.matches}
+            matches={matchesForScoring}
             participants={state.participants}
             predictions={state.predictions}
           />

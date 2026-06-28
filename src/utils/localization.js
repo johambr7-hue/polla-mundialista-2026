@@ -106,7 +106,7 @@ const teamFlags = {
   portugal: '🇵🇹',
   'rd congo': '🇨🇩',
   uzbekistan: '🇺🇿',
-  inglaterra: '🏴',
+  inglaterra: '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
   croacia: '🇭🇷',
   ghana: '🇬🇭',
   panama: '🇵🇦'
