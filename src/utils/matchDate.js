@@ -25,25 +25,16 @@ export const getYesterdayBogotaDateKey = (date = new Date()) => {
 
 export const getMatchDateTime = (match) => {
   if (!match?.date) return null;
-  const time = match.time && match.time !== 'TBD' ? match.time : '00:00';
-  const date = new Date(`${match.date}T${time}:00Z`);
+  if (!match.time || match.time === 'TBD') return null;
+  const date = new Date(`${match.date}T${match.time}:00`);
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
-export const getMatchBogotaDateKey = (match) => {
-  const date = getMatchDateTime(match);
-  return date ? getBogotaDateKey(date) : match?.date ?? '';
-};
+export const getMatchBogotaDateKey = (match) => match?.date ?? '';
 
 export const getMatchBogotaTime = (match) => {
-  const date = getMatchDateTime(match);
-  if (!date) return match?.time || 'Hora por definir';
-  return date.toLocaleTimeString('es-CO', {
-    hour: '2-digit',
-    hour12: false,
-    minute: '2-digit',
-    timeZone: APP_TIME_ZONE
-  });
+  if (!match?.time || match.time === 'TBD') return 'Hora por definir';
+  return match.time;
 };
 
 export const getMatchSortKey = (match) =>
