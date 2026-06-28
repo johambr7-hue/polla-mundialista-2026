@@ -83,15 +83,15 @@ function AdminPanel({
     setResultDrafts(createResultDrafts(matches));
   }, [matches]);
 
+  const resolvedOfficialMatches = useMemo(() => resolveOfficialMatches(matches), [matches]);
   const sortedMatches = useMemo(
-    () => [...matches].sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)),
-    [matches]
+    () => [...resolvedOfficialMatches].sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)),
+    [resolvedOfficialMatches]
   );
 
   const pendingMatches = sortedMatches.filter((match) => match.status !== 'jugado');
   const finishedMatches = sortedMatches.filter((match) => match.status === 'jugado');
   const stageOptions = [...new Set(sortedMatches.map((match) => match.stage).filter(Boolean))];
-  const resolvedOfficialMatches = useMemo(() => resolveOfficialMatches(matches), [matches]);
   const visibleResultMatches = sortedMatches.filter((match) => {
     const statusMatches =
       resultStatusFilter === 'all' ||
