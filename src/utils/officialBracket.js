@@ -187,6 +187,10 @@ const confirmedOfficialMatchTeams = {
     homeTeam: 'South Africa',
     awayTeam: 'Canada'
   },
+  74: {
+    homeTeam: 'Germany',
+    awayTeam: 'Paraguay'
+  },
   75: {
     homeTeam: 'Netherlands',
     awayTeam: 'Morocco'
@@ -195,12 +199,53 @@ const confirmedOfficialMatchTeams = {
     homeTeam: 'Brazil',
     awayTeam: 'Japan'
   },
+  77: {
+    homeTeam: 'France',
+    awayTeam: 'Sweden'
+  },
+  78: {
+    homeTeam: 'Ivory Coast',
+    awayTeam: 'Norway'
+  },
+  79: {
+    homeTeam: 'Mexico',
+    awayTeam: 'Ecuador'
+  },
+  80: {
+    homeTeam: 'England',
+    awayTeam: 'DR Congo'
+  },
   81: {
     homeTeam: 'United States',
     awayTeam: 'Bosnia and Herzegovina'
   },
+  82: {
+    homeTeam: 'Belgium',
+    awayTeam: 'Senegal'
+  },
+  83: {
+    homeTeam: 'Spain',
+    awayTeam: 'Austria'
+  },
+  84: {
+    homeTeam: 'Portugal',
+    awayTeam: 'Croatia'
+  },
+  85: {
+    homeTeam: 'Switzerland',
+    awayTeam: 'Algeria'
+  },
+  86: {
+    homeTeam: 'Australia',
+    awayTeam: 'Egypt'
+  },
   87: {
-    homeTeam: 'Argentina'
+    homeTeam: 'Argentina',
+    awayTeam: 'Cape Verde'
+  },
+  88: {
+    homeTeam: 'Colombia',
+    awayTeam: 'Ghana'
   }
 };
 
