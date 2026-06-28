@@ -35,6 +35,14 @@ export const defaultSettings = {
   firstPrizePercent: 70,
   secondPrizePercent: 30,
   predictionDeadline: '',
+  knockoutPhaseActivation: {
+    Dieciseisavos: false,
+    Octavos: false,
+    Cuartos: false,
+    Semifinal: false,
+    'Tercer puesto': false,
+    Final: false
+  },
   scoring: {
     'Fase de grupos': {
       result: 5,

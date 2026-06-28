@@ -193,6 +193,10 @@ const normalizeSettings = (rows) => {
     finalResultsPoints: {
       ...defaultSettings.finalResultsPoints,
       ...(settingFromRow(settingsRow).finalResultsPoints ?? {})
+    },
+    knockoutPhaseActivation: {
+      ...defaultSettings.knockoutPhaseActivation,
+      ...(settingFromRow(settingsRow).knockoutPhaseActivation ?? {})
     }
   };
 };

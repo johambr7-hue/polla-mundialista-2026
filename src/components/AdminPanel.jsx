@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BarChart3, ClipboardList, Database, Download, Lock, LogIn, RefreshCcw, RotateCcw, Save, Settings, Unlock, Upload } from 'lucide-react';
+import { BarChart3, CheckCircle2, ClipboardList, Database, Download, GitBranch, Lock, LogIn, Power, RefreshCcw, RotateCcw, Save, Settings, Unlock, Upload } from 'lucide-react';
 import { downloadCsv } from '../utils/exportCsv';
 import { formatCop } from '../utils/formatters';
 import { getGroupPredictionStatus, importGroupPredictions, reprocessGroupPredictions } from '../utils/importGroupPredictions';
 import { buildMasterImportState, validateMasterCsv } from '../utils/importMasterCsv';
 import { displayMatch, displayTeam } from '../utils/localization';
-import { isKnockoutStage } from '../utils/scoring';
+import { getKnockoutPhaseReadiness, isKnockoutPhaseActivated, isKnockoutStage, knockoutPhaseOrder } from '../utils/scoring';
+import { resolveOfficialMatches } from '../utils/officialBracket';
 import { validateTournamentEntry } from '../utils/tournament';
 
 const finalFields = [
@@ -26,6 +27,7 @@ const methodLabels = Object.fromEntries(classificationMethods);
 const adminTabs = [
   { id: 'results', label: 'Resultados', icon: ClipboardList },
   { id: 'dashboard', label: 'Resumen', icon: BarChart3 },
+  { id: 'bracketActivation', label: 'Activación de llaves', icon: GitBranch },
   { id: 'imports', label: 'Importaciones', icon: Upload },
   { id: 'polls', label: 'Pollas', icon: Database },
   { id: 'settings', label: 'Configuración', icon: Settings }
@@ -89,6 +91,7 @@ function AdminPanel({
   const pendingMatches = sortedMatches.filter((match) => match.status !== 'jugado');
   const finishedMatches = sortedMatches.filter((match) => match.status === 'jugado');
   const stageOptions = [...new Set(sortedMatches.map((match) => match.stage).filter(Boolean))];
+  const resolvedOfficialMatches = useMemo(() => resolveOfficialMatches(matches), [matches]);
   const visibleResultMatches = sortedMatches.filter((match) => {
     const statusMatches =
       resultStatusFilter === 'all' ||
@@ -123,6 +126,20 @@ function AdminPanel({
     updateSettings({
       ...settings,
       predictionsLocked: !settings.predictionsLocked
+    });
+  };
+
+  const toggleKnockoutPhase = (stage) => {
+    const phaseStatus = getKnockoutPhaseReadiness(resolvedOfficialMatches, stage);
+    const active = isKnockoutPhaseActivated(settings, stage);
+    if (!active && !phaseStatus.ready) return;
+
+    updateSettings({
+      ...settings,
+      knockoutPhaseActivation: {
+        ...(settings.knockoutPhaseActivation ?? {}),
+        [stage]: !active
+      }
     });
   };
 
@@ -893,6 +910,76 @@ function AdminPanel({
           </table>
         </div>
       </div>
+      )}
+
+      {activeAdminTab === 'bracketActivation' && (
+        <div className="panel bracket-activation-panel">
+          <div className="panel-heading">
+            <div>
+              <span className="eyebrow">Control de puntuación</span>
+              <h3>Activación de llaves por fase</h3>
+              <p className="muted">
+                Activa los puntos de equipos clasificados, llaves y marcadores únicamente cuando todos los cruces reales de la fase estén definidos.
+              </p>
+            </div>
+            <GitBranch size={22} />
+          </div>
+
+          <div className="notice">
+            Al cambiar una fase, la tabla de posiciones y sus estadísticas se recalculan automáticamente para todos los participantes.
+          </div>
+
+          <div className="bracket-activation-grid">
+            {knockoutPhaseOrder.map((stage) => {
+              const status = getKnockoutPhaseReadiness(resolvedOfficialMatches, stage);
+              const active = isKnockoutPhaseActivated(settings, stage);
+              const phaseRules = settings.scoring?.[stage] ?? {};
+
+              return (
+                <article className={`bracket-activation-card ${active ? 'active' : ''}`} key={stage}>
+                  <div className="bracket-activation-heading">
+                    <div>
+                      <span>{active ? 'Puntuación activa' : status.ready ? 'Lista para activar' : 'Esperando llaves'}</span>
+                      <h4>{stage}</h4>
+                    </div>
+                    <span className={`activation-status ${active ? 'active' : status.ready ? 'ready' : 'waiting'}`}>
+                      {active ? <CheckCircle2 size={16} /> : <Lock size={16} />}
+                      {active ? 'Activa' : 'Inactiva'}
+                    </span>
+                  </div>
+
+                  <div className="activation-progress-copy">
+                    <span>Llaves reales definidas</span>
+                    <strong>{status.defined} / {status.expected}</strong>
+                  </div>
+                  <div className="activation-progress" aria-label={`${status.defined} de ${status.expected} llaves definidas`}>
+                    <span style={{ width: `${status.expected ? Math.min((status.defined / status.expected) * 100, 100) : 0}%` }} />
+                  </div>
+
+                  <div className="activation-points">
+                    <span><strong>{Number(phaseRules.qualifiedTeam ?? 0)}</strong> pts por equipo clasificado</span>
+                    <span><strong>{Number(phaseRules.bracket ?? 0)}</strong> pts por llave</span>
+                    <span><strong>{Number(phaseRules.exactScore ?? 0)}</strong> pts por marcador exacto</span>
+                  </div>
+
+                  {!status.ready && !active && (
+                    <p className="activation-help">Faltan {Math.max(status.expected - status.defined, 0)} llaves por definir.</p>
+                  )}
+
+                  <button
+                    className={active ? 'danger-button' : 'primary-button'}
+                    disabled={!isAdmin || (!active && !status.ready)}
+                    onClick={() => toggleKnockoutPhase(stage)}
+                    type="button"
+                  >
+                    {active ? <Lock size={18} /> : <Power size={18} />}
+                    {active ? 'Desactivar puntos' : 'Activar puntos'}
+                  </button>
+                </article>
+              );
+            })}
+          </div>
+        </div>
       )}
 
       {activeAdminTab === 'dashboard' && (

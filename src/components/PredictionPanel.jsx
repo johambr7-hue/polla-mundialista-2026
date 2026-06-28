@@ -5,7 +5,6 @@ import {
   calculatePredictionBreakdown,
   calculatePredictionPoints,
   getPredictedQualifiedTeam,
-  isKnockoutScoringUnlocked,
   isMatchScorable,
   isPredictionDraw
 } from '../utils/scoring';
@@ -73,13 +72,12 @@ function PredictionPanel({
     const query = normalizeSearch(participantSearch);
     return participants.filter((item) => !query || normalizeSearch(item.name).includes(query));
   }, [participantSearch, participants]);
-  const knockoutScoringUnlocked = useMemo(() => isKnockoutScoringUnlocked(matches), [matches]);
   const participantPredictions = predictions.filter((prediction) => prediction.participantId === participantId);
   const participantSummary = participantPredictions.reduce(
     (acc, prediction) => {
       const match = matches.find((item) => item.id === prediction.matchId);
       if (!match) return acc;
-      const breakdown = calculatePredictionBreakdown(prediction, match, settings, knockoutScoringUnlocked);
+      const breakdown = calculatePredictionBreakdown(prediction, match, settings);
       acc.points += breakdown.total;
       if (breakdown.exactScoreHit) acc.exactScores += 1;
       if (breakdown.resultHit && isGroupStage(match.stage)) acc.resultHits += 1;
@@ -190,7 +188,7 @@ function PredictionPanel({
       (item) => item.matchId === match.id && item.participantId === participantId
     );
     const locked = predictionsClosed || (match.status === 'jugado' && !adminCanEditPlayedMatches);
-    const points = calculatePredictionPoints(prediction, match, settings, knockoutScoringUnlocked);
+    const points = calculatePredictionPoints(prediction, match, settings);
     const isScorable = isMatchScorable(match);
     const knockout = !isGroupStage(match.stage);
     const predictedTeams = {

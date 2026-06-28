@@ -11,7 +11,7 @@ import {
   validateTournamentEntry
 } from '../utils/tournament';
 import { displayTeam } from '../utils/localization';
-import { calculatePredictionBreakdown, isKnockoutScoringUnlocked } from '../utils/scoring';
+import { calculatePredictionBreakdown } from '../utils/scoring';
 
 const roundOrder = ['Dieciseisavos', 'Octavos', 'Cuartos', 'Semifinal', 'Tercer puesto', 'Final'];
 const viewTabs = ['Grupos', ...roundOrder, 'Ver llave'];
@@ -39,12 +39,11 @@ function TournamentPredictionPanel({
   const validation = validateTournamentEntry(matches, entry);
   const locked = (Boolean(settings.predictionsLocked) || isDeadlinePassed(settings.predictionDeadline)) && !isAdmin;
   const [activeView, setActiveView] = useState('Grupos');
-  const knockoutScoringUnlocked = isKnockoutScoringUnlocked(matches);
   const participantSummary = Object.entries(entry.matchPredictions ?? {}).reduce(
     (acc, [matchNumber, prediction]) => {
       const match = matches.find((item) => String(item.matchNumber) === String(matchNumber));
       if (!match) return acc;
-      const breakdown = calculatePredictionBreakdown(prediction, match, settings, knockoutScoringUnlocked);
+      const breakdown = calculatePredictionBreakdown(prediction, match, settings);
       acc.points += breakdown.total;
       if (breakdown.exactScoreHit) acc.exactScores += 1;
       if (breakdown.resultHit && match.stage === 'Fase de grupos') acc.resultHits += 1;
