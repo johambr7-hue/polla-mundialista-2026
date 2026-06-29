@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { displayMatch, displayTeam } from '../utils/localization';
+import { getPredictionsForMatchDistribution } from '../utils/scoring';
 
 const normalizeSearch = (value) =>
   String(value ?? '')
@@ -60,8 +61,7 @@ function SearchPanel({ matches, participants, predictions }) {
     return [...participantMatches, ...matchMatches, ...groupMatches].slice(0, 14);
   }, [globalQuery, matches, participants]);
 
-  const matchPredictions = predictions
-    .filter((prediction) => prediction.matchId === selectedMatchId)
+  const matchPredictions = getPredictionsForMatchDistribution(selectedMatch, predictions)
     .map((prediction) => ({
       ...prediction,
       participant: participants.find((participant) => participant.id === prediction.participantId)

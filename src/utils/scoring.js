@@ -165,6 +165,16 @@ const isBracketHit = (prediction, match) => {
   return predictedTeams.length === 2 && predictedTeams[0] === realTeams[0] && predictedTeams[1] === realTeams[1];
 };
 
+export const isExactBracketPrediction = (prediction, match) =>
+  !isGroupStage(match?.stage) && isRealBracketKnown(match) && isBracketHit(prediction, match);
+
+export const getPredictionsForMatchDistribution = (match, predictions) => {
+  if (!match) return [];
+  const matchPredictions = predictions.filter((prediction) => prediction.matchId === match.id);
+  if (isGroupStage(match.stage)) return matchPredictions;
+  return matchPredictions.filter((prediction) => isExactBracketPrediction(prediction, match));
+};
+
 export const isMatchScorable = (match) =>
   match.status === 'jugado' &&
   match.realHomeScore !== '' &&
@@ -545,8 +555,7 @@ export const calculatePrizes = (ranking, collectedTotal, settings) => {
 };
 
 export const getPredictionDistribution = (match, predictions) => {
-  const distribution = predictions
-    .filter((prediction) => prediction.matchId === match.id)
+  const distribution = getPredictionsForMatchDistribution(match, predictions)
     .reduce((acc, prediction) => {
       const key = `${prediction.homeScore}-${prediction.awayScore}`;
       acc[key] = (acc[key] || 0) + 1;

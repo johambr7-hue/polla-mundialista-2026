@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { getPredictionDistribution } from '../utils/scoring';
+import { getPredictionDistribution, getPredictionsForMatchDistribution } from '../utils/scoring';
 import { displayMatch, displayTeam, getTeamFlag } from '../utils/localization';
 import { getExactScoreDetails } from '../utils/exactScoreDetails';
 import { getBogotaDateKey, getMatchBogotaDateKey, getMatchBogotaTime, getMatchSortKey } from '../utils/matchDate';
@@ -160,8 +160,8 @@ function ChartsPanel({ matches, participants, predictions, ranking }) {
   );
 
   const getParticipantsForScore = (score) =>
-    predictions
-      .filter((prediction) => prediction.matchId === match?.id && `${prediction.homeScore}-${prediction.awayScore}` === score)
+    getPredictionsForMatchDistribution(match, predictions)
+      .filter((prediction) => `${prediction.homeScore}-${prediction.awayScore}` === score)
       .map((prediction) => participantById[prediction.participantId]?.name)
       .filter(Boolean)
       .sort((a, b) => a.localeCompare(b, 'es'));

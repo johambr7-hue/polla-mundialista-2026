@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { getPredictionDistribution } from '../utils/scoring';
+import { getPredictionDistribution, getPredictionsForMatchDistribution } from '../utils/scoring';
 import { displayMatch, displayTeam, getTeamFlag } from '../utils/localization';
 import {
   getBogotaDateKey,
@@ -53,8 +53,8 @@ function MatchPredictionChart({ match, openScoreKey, participantById, prediction
   const officialScore = hasRealScore(match) ? `${match.realHomeScore}-${match.realAwayScore}` : '';
 
   const getParticipantsForScore = (score) =>
-    predictions
-      .filter((prediction) => prediction.matchId === match.id && `${prediction.homeScore}-${prediction.awayScore}` === score)
+    getPredictionsForMatchDistribution(match, predictions)
+      .filter((prediction) => `${prediction.homeScore}-${prediction.awayScore}` === score)
       .map((prediction) => participantById[prediction.participantId]?.name)
       .filter(Boolean)
       .sort((a, b) => a.localeCompare(b, 'es'));
@@ -124,7 +124,7 @@ function TodayMatchesPanel({ matches, participants, predictions }) {
   );
   const finishedCount = dayMatches.filter((match) => match.status === 'jugado').length;
   const dayPredictionCount = dayMatches.reduce(
-    (total, match) => total + predictions.filter((prediction) => prediction.matchId === match.id).length,
+    (total, match) => total + getPredictionsForMatchDistribution(match, predictions).length,
     0
   );
 
