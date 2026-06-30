@@ -84,6 +84,10 @@ function AdminPanel({
   }, [matches]);
 
   const resolvedOfficialMatches = useMemo(() => resolveOfficialMatches(matches), [matches]);
+  const resolvedMatchById = useMemo(
+    () => new Map(resolvedOfficialMatches.map((match) => [match.id, match])),
+    [resolvedOfficialMatches]
+  );
   const sortedMatches = useMemo(
     () => [...resolvedOfficialMatches].sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)),
     [resolvedOfficialMatches]
@@ -143,32 +147,85 @@ function AdminPanel({
     });
   };
 
+  const completeKnockoutDraft = (match, draft = {}) => {
+    if (
+      !match ||
+      !isKnockoutStage(match.stage) ||
+      draft.realHomeScore === '' ||
+      draft.realHomeScore == null ||
+      draft.realAwayScore === '' ||
+      draft.realAwayScore == null
+    ) {
+      return draft;
+    }
+
+    const homeGoals = Number(draft.realHomeScore);
+    const awayGoals = Number(draft.realAwayScore);
+
+    if (!Number.isFinite(homeGoals) || !Number.isFinite(awayGoals) || homeGoals === awayGoals) {
+      return draft;
+    }
+
+    return {
+      ...draft,
+      qualifiedTeam: draft.qualifiedTeam || (homeGoals > awayGoals ? match.homeTeam : match.awayTeam),
+      classificationMethod: draft.classificationMethod || 'regulation'
+    };
+  };
+
+  const isValidResultDraft = (match, draft = {}) => {
+    const knockout = isKnockoutStage(match.stage);
+
+    if (
+      draft.realHomeScore === '' ||
+      draft.realHomeScore == null ||
+      draft.realAwayScore === '' ||
+      draft.realAwayScore == null
+    ) {
+      return false;
+    }
+    if (!knockout) return true;
+    if (!draft.qualifiedTeam || !draft.classificationMethod) return false;
+
+    const homeGoals = Number(draft.realHomeScore);
+    const awayGoals = Number(draft.realAwayScore);
+
+    if (homeGoals === awayGoals && draft.classificationMethod === 'regulation') return false;
+
+    return true;
+  };
+
   const updateResultDraft = (matchId, field, value) => {
-    setResultDrafts((current) => ({
-      ...current,
-      [matchId]: {
+    const resolvedMatch = resolvedMatchById.get(matchId);
+
+    setResultDrafts((current) => {
+      const nextDraft = {
         ...current[matchId],
         [field]: value
-      }
-    }));
+      };
+
+      return {
+        ...current,
+        [matchId]: completeKnockoutDraft(resolvedMatch, nextDraft)
+      };
+    });
   };
 
   const saveOfficialResult = (match) => {
-    const draft = resultDrafts[match.id];
+    const draft = completeKnockoutDraft(match, resultDrafts[match.id]);
     const knockout = isKnockoutStage(match.stage);
-    const homeScore = draft.realHomeScore;
-    const awayScore = draft.realAwayScore;
 
-    if (homeScore === '' || awayScore === '') return;
-    if (knockout && (!draft.qualifiedTeam || !draft.classificationMethod)) return;
+    if (!isValidResultDraft(match, draft)) return;
 
     updateMatches(
       matches.map((item) =>
         item.id === match.id
           ? {
               ...item,
-              realHomeScore: Number(homeScore),
-              realAwayScore: Number(awayScore),
+              homeTeam: knockout ? match.homeTeam : item.homeTeam,
+              awayTeam: knockout ? match.awayTeam : item.awayTeam,
+              realHomeScore: Number(draft.realHomeScore),
+              realAwayScore: Number(draft.realAwayScore),
               qualifiedTeam: knockout ? draft.qualifiedTeam : draft.qualifiedTeam || '',
               classificationMethod: knockout ? draft.classificationMethod : draft.classificationMethod || 'regulation',
               status: 'jugado'
@@ -181,15 +238,16 @@ function AdminPanel({
   const saveAllCompleteResults = () => {
     updateMatches(
       matches.map((match) => {
-        const draft = resultDrafts[match.id];
+        const resolvedMatch = resolvedMatchById.get(match.id) ?? match;
+        const draft = completeKnockoutDraft(resolvedMatch, resultDrafts[match.id]);
         const knockout = isKnockoutStage(match.stage);
-        const hasScore = draft.realHomeScore !== '' && draft.realAwayScore !== '';
-        const hasKnockoutInfo = !knockout || (draft.qualifiedTeam && draft.classificationMethod);
 
-        if (!hasScore || !hasKnockoutInfo) return match;
+        if (!isValidResultDraft(resolvedMatch, draft)) return match;
 
         return {
           ...match,
+          homeTeam: knockout ? resolvedMatch.homeTeam : match.homeTeam,
+          awayTeam: knockout ? resolvedMatch.awayTeam : match.awayTeam,
           realHomeScore: Number(draft.realHomeScore),
           realAwayScore: Number(draft.realAwayScore),
           qualifiedTeam: knockout ? draft.qualifiedTeam : draft.qualifiedTeam || '',
@@ -1157,11 +1215,11 @@ function AdminPanel({
               {visibleResultMatches.map((match) => {
                 const draft = resultDrafts[match.id] ?? {};
                 const knockout = isKnockoutStage(match.stage);
-                const canSave =
-                  isAdmin &&
+                const canSave = isAdmin && isValidResultDraft(match, completeKnockoutDraft(match, draft));
+                const isDraw =
                   draft.realHomeScore !== '' &&
                   draft.realAwayScore !== '' &&
-                  (!knockout || (draft.qualifiedTeam && draft.classificationMethod));
+                  Number(draft.realHomeScore) === Number(draft.realAwayScore);
 
                 return (
                   <tr key={match.id}>
@@ -1237,7 +1295,10 @@ function AdminPanel({
                         Guardar
                       </button>
                       {!canSave && isAdmin && (
-                        <span className="table-subtext">Completa marcador{knockout ? ', clasificado y método' : ''}</span>
+                        <span className="table-subtext">
+                          Completa marcador
+                          {knockout ? (isDraw ? ', clasificado y penales/prórroga' : ', clasificado y método') : ''}
+                        </span>
                       )}
                     </td>
                   </tr>
