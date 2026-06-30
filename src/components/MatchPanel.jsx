@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Edit2, Plus, Save, Trash2, X } from 'lucide-react';
 import { displayTeam, getTeamFlag } from '../utils/localization';
-import { areOfficialKnockoutBracketsUnlocked, buildOfficialBracketRounds } from '../utils/officialBracket';
+import { areOfficialKnockoutBracketsUnlocked, buildOfficialBracketRounds, resolveOfficialMatches } from '../utils/officialBracket';
 
 const emptyMatch = {
   matchNumber: '',
@@ -48,22 +48,23 @@ function MatchPanel({ isAdmin, matches, predictions, updateMatches, updatePredic
   const [filters, setFilters] = useState({ date: '', group: 'all', stage: 'Fase de grupos' });
   const [bracketFilters, setBracketFilters] = useState({ query: '', stage: 'all' });
   const [scoreDrafts, setScoreDrafts] = useState({});
+  const resolvedMatches = useMemo(() => resolveOfficialMatches(matches), [matches]);
 
   const filteredMatches = useMemo(
     () =>
-      matches
+      resolvedMatches
         .filter((match) => !filters.date || match.date === filters.date)
         .filter((match) => filters.group === 'all' || match.group === filters.group)
         .filter((match) => filters.stage === 'all' || match.stage === filters.stage)
         .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)),
-    [matches, filters]
+    [resolvedMatches, filters]
   );
 
   const groupOptions = useMemo(
     () =>
-      [...new Set(matches.filter((match) => match.stage === 'Fase de grupos').map((match) => match.group).filter(Boolean))]
+      [...new Set(resolvedMatches.filter((match) => match.stage === 'Fase de grupos').map((match) => match.group).filter(Boolean))]
         .sort((a, b) => a.localeCompare(b, 'es')),
-    [matches]
+    [resolvedMatches]
   );
 
   const matchesByGroup = useMemo(
