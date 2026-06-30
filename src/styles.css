@@ -747,6 +747,10 @@ th {
   width: 100%;
 }
 
+.compact-warning {
+  margin: 8px 0 0;
+}
+
 .match-form-panel {
   max-width: 860px;
 }

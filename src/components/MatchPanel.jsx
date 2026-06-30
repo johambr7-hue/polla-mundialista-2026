@@ -49,6 +49,10 @@ function MatchPanel({ isAdmin, matches, predictions, updateMatches, updatePredic
   const [bracketFilters, setBracketFilters] = useState({ query: '', stage: 'all' });
   const [scoreDrafts, setScoreDrafts] = useState({});
   const resolvedMatches = useMemo(() => resolveOfficialMatches(matches), [matches]);
+  const resolvedMatchById = useMemo(
+    () => new Map(resolvedMatches.map((match) => [match.id, match])),
+    [resolvedMatches]
+  );
 
   const filteredMatches = useMemo(
     () =>
@@ -160,30 +164,92 @@ function MatchPanel({ isAdmin, matches, predictions, updateMatches, updatePredic
   const getScoreDraft = (match) => ({
     realHomeScore: scoreDrafts[match.id]?.realHomeScore ?? match.realHomeScore ?? '',
     realAwayScore: scoreDrafts[match.id]?.realAwayScore ?? match.realAwayScore ?? '',
+    qualifiedTeam: scoreDrafts[match.id]?.qualifiedTeam ?? match.qualifiedTeam ?? '',
+    classificationMethod: scoreDrafts[match.id]?.classificationMethod ?? match.classificationMethod ?? '',
     status: scoreDrafts[match.id]?.status ?? match.status ?? 'pendiente'
   });
 
+  const completeKnockoutDraft = (match, draft = {}) => {
+    if (
+      !match ||
+      !knockoutStageOptions.includes(match.stage) ||
+      draft.realHomeScore === '' ||
+      draft.realHomeScore == null ||
+      draft.realAwayScore === '' ||
+      draft.realAwayScore == null
+    ) {
+      return draft;
+    }
+
+    const homeGoals = Number(draft.realHomeScore);
+    const awayGoals = Number(draft.realAwayScore);
+
+    if (!Number.isFinite(homeGoals) || !Number.isFinite(awayGoals) || homeGoals === awayGoals) {
+      return draft;
+    }
+
+    return {
+      ...draft,
+      qualifiedTeam: draft.qualifiedTeam || (homeGoals > awayGoals ? match.homeTeam : match.awayTeam),
+      classificationMethod: draft.classificationMethod || 'regulation'
+    };
+  };
+
+  const isValidScoreDraft = (match, draft = {}) => {
+    const knockout = knockoutStageOptions.includes(match.stage);
+
+    if (
+      draft.realHomeScore === '' ||
+      draft.realHomeScore == null ||
+      draft.realAwayScore === '' ||
+      draft.realAwayScore == null
+    ) {
+      return false;
+    }
+
+    if (!knockout) return true;
+    if (!draft.qualifiedTeam || !draft.classificationMethod) return false;
+
+    const homeGoals = Number(draft.realHomeScore);
+    const awayGoals = Number(draft.realAwayScore);
+
+    if (homeGoals === awayGoals && draft.classificationMethod === 'regulation') return false;
+
+    return true;
+  };
+
   const updateScoreDraft = (matchId, field, value) => {
-    setScoreDrafts((current) => ({
-      ...current,
-      [matchId]: {
+    const resolvedMatch = resolvedMatchById.get(matchId);
+
+    setScoreDrafts((current) => {
+      const nextDraft = {
         ...(current[matchId] ?? {}),
         [field]: value
-      }
-    }));
+      };
+
+      return {
+        ...current,
+        [matchId]: completeKnockoutDraft(resolvedMatch, nextDraft)
+      };
+    });
   };
 
   const saveQuickScore = (match) => {
-    const draft = getScoreDraft(match);
-    if (draft.realHomeScore === '' || draft.realAwayScore === '') return;
+    const draft = completeKnockoutDraft(match, getScoreDraft(match));
+    const knockout = knockoutStageOptions.includes(match.stage);
+    if (!isValidScoreDraft(match, draft)) return;
 
     updateMatches(
       matches.map((item) =>
         item.id === match.id
           ? {
               ...item,
+              homeTeam: knockout ? match.homeTeam : item.homeTeam,
+              awayTeam: knockout ? match.awayTeam : item.awayTeam,
               realHomeScore: Number(draft.realHomeScore),
               realAwayScore: Number(draft.realAwayScore),
+              qualifiedTeam: knockout ? draft.qualifiedTeam : draft.qualifiedTeam || '',
+              classificationMethod: knockout ? draft.classificationMethod : draft.classificationMethod || 'regulation',
               status: draft.status
             }
           : item
@@ -218,91 +284,137 @@ function MatchPanel({ isAdmin, matches, predictions, updateMatches, updatePredic
       [match.id]: {
         realHomeScore: '',
         realAwayScore: '',
+        qualifiedTeam: '',
+        classificationMethod: '',
         status: 'pendiente'
       }
     }));
   };
 
-  const renderMatchCard = (match) => (
-    <article className="match-card result-match-card" key={match.id ?? `${match.matchNumber}-${match.date}-${match.homeTeam}-${match.awayTeam}`}>
-      <div className="match-meta">
-        <span>{match.matchNumber ? `#${match.matchNumber} · ` : ''}{match.date} · {match.time}</span>
-        <span>{match.group || match.stage}</span>
-      </div>
-      <div className="result-scoreboard">
-        <strong>{displayTeam(match.homeTeam)}</strong>
-        <span>{match.realHomeScore === '' ? '-' : match.realHomeScore} : {match.realAwayScore === '' ? '-' : match.realAwayScore}</span>
-        <strong>{displayTeam(match.awayTeam)}</strong>
-      </div>
-      <div className="result-info-strip">
-        <span>📅 {match.date || 'Sin fecha'}</span>
-        <span>🏟️ {match.stadium || match.city || 'Sede por definir'}</span>
-        <span>🏁 {match.qualifiedTeam ? `Clasifica ${displayTeam(match.qualifiedTeam)}` : 'Sin clasificado'}</span>
-      </div>
-      <div className="quick-score-form">
-        <label>
-          Goles {displayTeam(match.homeTeam)}
-          <input
-            disabled={!isAdmin}
-            min="0"
-            onChange={(event) => updateScoreDraft(match.id, 'realHomeScore', event.target.value)}
-            type="number"
-            value={getScoreDraft(match).realHomeScore}
-          />
-        </label>
-        <label>
-          Goles {displayTeam(match.awayTeam)}
-          <input
-            disabled={!isAdmin}
-            min="0"
-            onChange={(event) => updateScoreDraft(match.id, 'realAwayScore', event.target.value)}
-            type="number"
-            value={getScoreDraft(match).realAwayScore}
-          />
-        </label>
-        <label>
-          Estado
-          <select
-            disabled={!isAdmin}
-            onChange={(event) => updateScoreDraft(match.id, 'status', event.target.value)}
-            value={getScoreDraft(match).status}
+  const renderMatchCard = (match) => {
+    const draft = completeKnockoutDraft(match, getScoreDraft(match));
+    const knockout = knockoutStageOptions.includes(match.stage);
+    const canSave = isAdmin && isValidScoreDraft(match, draft);
+    const isDraw =
+      draft.realHomeScore !== '' &&
+      draft.realAwayScore !== '' &&
+      Number(draft.realHomeScore) === Number(draft.realAwayScore);
+
+    return (
+      <article className="match-card result-match-card" key={match.id ?? `${match.matchNumber}-${match.date}-${match.homeTeam}-${match.awayTeam}`}>
+        <div className="match-meta">
+          <span>{match.matchNumber ? `#${match.matchNumber} · ` : ''}{match.date} · {match.time}</span>
+          <span>{match.group || match.stage}</span>
+        </div>
+        <div className="result-scoreboard">
+          <strong>{displayTeam(match.homeTeam)}</strong>
+          <span>{match.realHomeScore === '' ? '-' : match.realHomeScore} : {match.realAwayScore === '' ? '-' : match.realAwayScore}</span>
+          <strong>{displayTeam(match.awayTeam)}</strong>
+        </div>
+        <div className="result-info-strip">
+          <span>📅 {match.date || 'Sin fecha'}</span>
+          <span>🏟️ {match.stadium || match.city || 'Sede por definir'}</span>
+          <span>🏁 {match.qualifiedTeam ? `Clasifica ${displayTeam(match.qualifiedTeam)}` : 'Sin clasificado'}</span>
+        </div>
+        <div className="quick-score-form">
+          <label>
+            Goles {displayTeam(match.homeTeam)}
+            <input
+              disabled={!isAdmin}
+              min="0"
+              onChange={(event) => updateScoreDraft(match.id, 'realHomeScore', event.target.value)}
+              type="number"
+              value={draft.realHomeScore}
+            />
+          </label>
+          <label>
+            Goles {displayTeam(match.awayTeam)}
+            <input
+              disabled={!isAdmin}
+              min="0"
+              onChange={(event) => updateScoreDraft(match.id, 'realAwayScore', event.target.value)}
+              type="number"
+              value={draft.realAwayScore}
+            />
+          </label>
+          {knockout && (
+            <>
+              <label>
+                Clasificado
+                <select
+                  disabled={!isAdmin}
+                  onChange={(event) => updateScoreDraft(match.id, 'qualifiedTeam', event.target.value)}
+                  value={draft.qualifiedTeam}
+                >
+                  <option value="">Seleccionar</option>
+                  <option value={match.homeTeam}>{displayTeam(match.homeTeam)}</option>
+                  <option value={match.awayTeam}>{displayTeam(match.awayTeam)}</option>
+                </select>
+              </label>
+              <label>
+                Método
+                <select
+                  disabled={!isAdmin}
+                  onChange={(event) => updateScoreDraft(match.id, 'classificationMethod', event.target.value)}
+                  value={draft.classificationMethod}
+                >
+                  <option value="">Seleccionar</option>
+                  {classificationMethods.map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+              </label>
+            </>
+          )}
+          <label>
+            Estado
+            <select
+              disabled={!isAdmin}
+              onChange={(event) => updateScoreDraft(match.id, 'status', event.target.value)}
+              value={draft.status}
+            >
+              <option value="pendiente">Pendiente</option>
+              <option value="jugado">Jugado</option>
+            </select>
+          </label>
+          <button
+            className="primary-button compact"
+            disabled={!canSave}
+            onClick={() => saveQuickScore(match)}
+            type="button"
           >
-            <option value="pendiente">Pendiente</option>
-            <option value="jugado">Jugado</option>
-          </select>
-        </label>
-        <button
-          className="primary-button compact"
-          disabled={!isAdmin || getScoreDraft(match).realHomeScore === '' || getScoreDraft(match).realAwayScore === ''}
-          onClick={() => saveQuickScore(match)}
-          type="button"
-        >
-          <Save size={16} />
-          Guardar marcador
-        </button>
-        <button
-          className="secondary-button compact"
-          disabled={!isAdmin}
-          onClick={() => clearQuickScore(match)}
-          type="button"
-        >
-          Limpiar
-        </button>
-      </div>
-      <div className="card-footer">
-        <span className={`status ${match.status}`}>{match.status}</span>
-        <span>{match.stadium ? `${match.stadium}, ${match.city}` : match.stage}</span>
-        <div className="row-actions">
-          <button className="icon-button" disabled={!isAdmin} onClick={() => editMatch(match)} type="button" title="Editar partido">
-            <Edit2 size={18} />
+            <Save size={16} />
+            Guardar marcador
           </button>
-          <button className="icon-button danger" disabled={!isAdmin} onClick={() => removeMatch(match.id)} type="button" title="Eliminar partido">
-            <Trash2 size={18} />
+          <button
+            className="secondary-button compact"
+            disabled={!isAdmin}
+            onClick={() => clearQuickScore(match)}
+            type="button"
+          >
+            Limpiar
           </button>
         </div>
-      </div>
-    </article>
-  );
+        {!canSave && isAdmin && (
+          <p className="muted compact-warning">
+            Completa marcador{knockout ? (isDraw ? ', clasificado y penales/prórroga' : ', clasificado y método') : ''}.
+          </p>
+        )}
+        <div className="card-footer">
+          <span className={`status ${match.status}`}>{match.status}</span>
+          <span>{match.stadium ? `${match.stadium}, ${match.city}` : match.stage}</span>
+          <div className="row-actions">
+            <button className="icon-button" disabled={!isAdmin} onClick={() => editMatch(match)} type="button" title="Editar partido">
+              <Edit2 size={18} />
+            </button>
+            <button className="icon-button danger" disabled={!isAdmin} onClick={() => removeMatch(match.id)} type="button" title="Eliminar partido">
+              <Trash2 size={18} />
+            </button>
+          </div>
+        </div>
+      </article>
+    );
+  };
 
   const renderBracketMatch = (match) => {
     const homeIsWinner = isSameTeam(match.winner, match.homeTeam);
