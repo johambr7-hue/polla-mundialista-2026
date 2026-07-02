@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { getPredictionDistribution, getPredictionsForMatchDistribution } from '../utils/scoring';
+import { getPredictionDistribution, getPredictionsForMatchDistribution, getPredictionScoreKeyForMatch } from '../utils/scoring';
 import { displayMatch, displayTeam, getTeamFlag } from '../utils/localization';
 import {
   getBogotaDateKey,
@@ -54,7 +54,7 @@ function MatchPredictionChart({ match, openScoreKey, participantById, prediction
 
   const getParticipantsForScore = (score) =>
     getPredictionsForMatchDistribution(match, predictions)
-      .filter((prediction) => `${prediction.homeScore}-${prediction.awayScore}` === score)
+      .filter((prediction) => getPredictionScoreKeyForMatch(prediction, match) === score)
       .map((prediction) => participantById[prediction.participantId]?.name)
       .filter(Boolean)
       .sort((a, b) => a.localeCompare(b, 'es'));

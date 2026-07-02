@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { getPredictionDistribution, getPredictionsForMatchDistribution } from '../utils/scoring';
+import { getPredictionDistribution, getPredictionsForMatchDistribution, getPredictionScoreKeyForMatch } from '../utils/scoring';
 import { displayMatch, displayTeam, getTeamFlag } from '../utils/localization';
 import { getExactScoreDetails } from '../utils/exactScoreDetails';
 import { getBogotaDateKey, getMatchBogotaDateKey, getMatchBogotaTime, getMatchSortKey } from '../utils/matchDate';
@@ -98,7 +98,7 @@ function ChartsPanel({ matches, participants, predictions, ranking }) {
   const matchesWithPredictions = useMemo(
     () =>
       matches
-        .filter((item) => predictions.some((prediction) => prediction.matchId === item.id))
+        .filter((item) => getPredictionsForMatchDistribution(item, predictions).length > 0)
         .sort((a, b) => getMatchSortKey(a).localeCompare(getMatchSortKey(b))),
     [matches, predictions]
   );
@@ -161,7 +161,7 @@ function ChartsPanel({ matches, participants, predictions, ranking }) {
 
   const getParticipantsForScore = (score) =>
     getPredictionsForMatchDistribution(match, predictions)
-      .filter((prediction) => `${prediction.homeScore}-${prediction.awayScore}` === score)
+      .filter((prediction) => getPredictionScoreKeyForMatch(prediction, match) === score)
       .map((prediction) => participantById[prediction.participantId]?.name)
       .filter(Boolean)
       .sort((a, b) => a.localeCompare(b, 'es'));

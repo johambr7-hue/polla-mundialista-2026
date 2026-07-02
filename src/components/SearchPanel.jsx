@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { displayMatch, displayTeam } from '../utils/localization';
-import { getPredictionsForMatchDistribution } from '../utils/scoring';
+import { getPredictionScoreKeyForMatch, getPredictionsForMatchDistribution } from '../utils/scoring';
 
 const normalizeSearch = (value) =>
   String(value ?? '')
@@ -70,8 +70,9 @@ function SearchPanel({ matches, participants, predictions }) {
   const scoreResults = matchPredictions.filter((prediction) => {
     const hasHome = scoreQuery.home !== '';
     const hasAway = scoreQuery.away !== '';
-    return (!hasHome || Number(scoreQuery.home) === Number(prediction.homeScore)) &&
-      (!hasAway || Number(scoreQuery.away) === Number(prediction.awayScore));
+    const [homeScore, awayScore] = getPredictionScoreKeyForMatch(prediction, selectedMatch).split('-');
+    return (!hasHome || Number(scoreQuery.home) === Number(homeScore)) &&
+      (!hasAway || Number(scoreQuery.away) === Number(awayScore));
   });
 
   return (
@@ -162,7 +163,7 @@ function SearchPanel({ matches, participants, predictions }) {
             <article className="list-item" key={prediction.id}>
               <div>
                 <strong>{prediction.participant?.name ?? 'Participante eliminado'}</strong>
-                <span>{prediction.homeScore} - {prediction.awayScore}</span>
+                <span>{getPredictionScoreKeyForMatch(prediction, selectedMatch).replace('-', ' - ')}</span>
               </div>
             </article>
           ))}

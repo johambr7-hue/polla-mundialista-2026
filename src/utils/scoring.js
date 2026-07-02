@@ -168,11 +168,57 @@ const isBracketHit = (prediction, match) => {
 export const isExactBracketPrediction = (prediction, match) =>
   !isGroupStage(match?.stage) && isRealBracketKnown(match) && isBracketHit(prediction, match);
 
+const isSamePredictionStage = (prediction, match) => {
+  const predictionStage = prediction?.stage || prediction?.phase || '';
+  return !predictionStage || normalize(predictionStage) === normalize(match?.stage);
+};
+
+const hasPredictionScore = (prediction) =>
+  prediction?.homeScore !== '' &&
+  prediction?.homeScore !== null &&
+  prediction?.homeScore !== undefined &&
+  prediction?.awayScore !== '' &&
+  prediction?.awayScore !== null &&
+  prediction?.awayScore !== undefined;
+
+export const getPredictionScoreKeyForMatch = (prediction, match) => {
+  if (!prediction || !match || !hasPredictionScore(prediction)) return '';
+  if (isGroupStage(match.stage)) return `${prediction.homeScore}-${prediction.awayScore}`;
+
+  const predictedTeams = getPredictedTeams(prediction, match);
+  const predictedScore = getPairScore(predictedTeams.home, predictedTeams.away, prediction.homeScore, prediction.awayScore);
+  const homeKey = teamKey(match.homeTeam);
+  const awayKey = teamKey(match.awayTeam);
+
+  if (predictedScore[homeKey] === undefined || predictedScore[awayKey] === undefined) {
+    return `${prediction.homeScore}-${prediction.awayScore}`;
+  }
+
+  return `${predictedScore[homeKey]}-${predictedScore[awayKey]}`;
+};
+
 export const getPredictionsForMatchDistribution = (match, predictions) => {
   if (!match) return [];
   const matchPredictions = predictions.filter((prediction) => prediction.matchId === match.id);
   if (isGroupStage(match.stage)) return matchPredictions;
-  return matchPredictions.filter((prediction) => isExactBracketPrediction(prediction, match));
+
+  if (!isRealBracketKnown(match)) return [];
+
+  const exactBracketPredictions = predictions.filter(
+    (prediction) => isSamePredictionStage(prediction, match) && isExactBracketPrediction(prediction, match)
+  );
+  const uniqueByParticipant = new Map();
+
+  exactBracketPredictions.forEach((prediction) => {
+    const key = prediction.participantId || prediction.id;
+    const current = uniqueByParticipant.get(key);
+
+    if (!current || (prediction.matchId === match.id && current.matchId !== match.id)) {
+      uniqueByParticipant.set(key, prediction);
+    }
+  });
+
+  return [...uniqueByParticipant.values()];
 };
 
 export const isMatchScorable = (match) =>
@@ -557,7 +603,8 @@ export const calculatePrizes = (ranking, collectedTotal, settings) => {
 export const getPredictionDistribution = (match, predictions) => {
   const distribution = getPredictionsForMatchDistribution(match, predictions)
     .reduce((acc, prediction) => {
-      const key = `${prediction.homeScore}-${prediction.awayScore}`;
+      const key = getPredictionScoreKeyForMatch(prediction, match);
+      if (!key) return acc;
       acc[key] = (acc[key] || 0) + 1;
       return acc;
     }, {});
