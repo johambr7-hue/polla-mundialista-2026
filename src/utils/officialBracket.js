@@ -246,6 +246,38 @@ const confirmedOfficialMatchTeams = {
   88: {
     homeTeam: 'Colombia',
     awayTeam: 'Ghana'
+  },
+  89: {
+    homeTeam: 'Canada',
+    awayTeam: 'Morocco'
+  },
+  90: {
+    homeTeam: 'Paraguay',
+    awayTeam: 'France'
+  },
+  91: {
+    homeTeam: 'Brazil',
+    awayTeam: 'Norway'
+  },
+  92: {
+    homeTeam: 'Mexico',
+    awayTeam: 'England'
+  },
+  93: {
+    homeTeam: 'Portugal',
+    awayTeam: 'Spain'
+  },
+  94: {
+    homeTeam: 'United States',
+    awayTeam: 'Belgium'
+  },
+  95: {
+    homeTeam: 'Argentina',
+    awayTeam: 'Egypt'
+  },
+  96: {
+    homeTeam: 'Switzerland',
+    awayTeam: 'Colombia'
   }
 };
 
