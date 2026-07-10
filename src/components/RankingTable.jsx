@@ -11,6 +11,13 @@ const podiumConfig = [
   { medal: '🥉', label: 'Tercer lugar', className: 'bronze' }
 ];
 
+const finalPickConfig = [
+  { icon: '🏆', key: 'champion', label: 'Campeón', pointsKey: 'champion' },
+  { icon: '🥈', key: 'second', label: 'Subcampeón', pointsKey: 'second' },
+  { icon: '🥉', key: 'third', label: 'Tercer lugar', pointsKey: 'third' },
+  { icon: '4', key: 'fourth', label: 'Cuarto lugar', pointsKey: 'fourth' }
+];
+
 const getTrend = (participant) => {
   if (!participant.previousPosition) return '➡️';
   if (participant.previousPosition > participant.position) return '⬆️';
@@ -36,6 +43,125 @@ const getDifferenceClass = (difference) => {
 };
 
 const formatScore = (score) => String(score || '-').replace('-', ' - ');
+
+const normalizeTeamName = (value) =>
+  String(displayTeam(value) || value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const isPlaceholderTeam = (team) => {
+  const normalized = normalizeTeamName(team);
+  return (
+    !normalized ||
+    normalized === 'por definir' ||
+    normalized === 'a definir' ||
+    normalized.includes('ganador grupo') ||
+    normalized.includes('segundo grupo') ||
+    normalized.includes('mejor tercero') ||
+    normalized.includes('winner group') ||
+    normalized.includes('runner-up') ||
+    normalized.includes('best 3rd')
+  );
+};
+
+const isKnockoutMatch = (match) => match?.stage && match.stage !== 'Fase de grupos';
+
+const addLiveTeam = (teams, team) => {
+  if (isPlaceholderTeam(team)) return;
+  teams.set(normalizeTeamName(team), displayTeam(team) || team);
+};
+
+const collectLiveTeams = (matches, finalPredictions) => {
+  const teams = new Map();
+
+  matches
+    .filter((match) => isKnockoutMatch(match) && match.status !== 'jugado')
+    .forEach((match) => {
+      addLiveTeam(teams, match.homeTeam);
+      addLiveTeam(teams, match.awayTeam);
+    });
+
+  if (!teams.size) {
+    Object.values(finalPredictions ?? {}).forEach((prediction) => {
+      finalPickConfig.forEach(({ key }) => addLiveTeam(teams, getFinalPredictionValue(prediction, key)));
+    });
+  }
+
+  return teams;
+};
+
+const getFinalPredictionValue = (prediction, key) => {
+  if (key === 'second') return prediction?.second ?? prediction?.runnerUp ?? prediction?.runner_up ?? '';
+  if (key === 'third') return prediction?.third ?? prediction?.thirdPlace ?? prediction?.third_place ?? '';
+  if (key === 'fourth') return prediction?.fourth ?? prediction?.fourthPlace ?? prediction?.fourth_place ?? '';
+  return prediction?.[key] ?? '';
+};
+
+const getContenderStatus = ({ canReachLeader, championAlive, livePicks, position }) => {
+  if (position === 1) return 'Favorito actual';
+  if (!livePicks.length) return 'Sin picks vivos';
+  if (canReachLeader && championAlive) return 'Aspirante fuerte';
+  if (canReachLeader) return 'Sigue con vida';
+  return 'Necesita milagro';
+};
+
+const buildTitleContenders = ({ finalPredictions = {}, matches = [], ranking = [], settings = {} }) => {
+  const leaderPoints = ranking[0]?.totalPoints ?? 0;
+  const liveTeams = collectLiveTeams(matches, finalPredictions);
+  const finalPoints = settings.finalResultsPoints ?? {};
+
+  const contenders = ranking.map((participant) => {
+    const prediction = finalPredictions[participant.id] ?? {};
+    const picks = finalPickConfig.map((config) => {
+      const team = getFinalPredictionValue(prediction, config.key);
+      const normalizedTeam = normalizeTeamName(team);
+      const isLive = Boolean(team) && liveTeams.has(normalizedTeam);
+      const points = Number(finalPoints[config.pointsKey] ?? 0);
+
+      return {
+        ...config,
+        isLive,
+        points,
+        team
+      };
+    });
+    const livePicks = picks.filter((pick) => pick.isLive);
+    const possibleFinalPoints = livePicks.reduce((sum, pick) => sum + pick.points, 0);
+    const maximumPossible = participant.totalPoints + possibleFinalPoints;
+    const gapToLeader = Math.max(leaderPoints - participant.totalPoints, 0);
+    const canReachLeader = maximumPossible >= leaderPoints;
+    const championAlive = livePicks.some((pick) => pick.key === 'champion');
+    const reachBonus = Math.max(maximumPossible - leaderPoints, 0);
+    const probabilityWeight = canReachLeader
+      ? Math.max(2, possibleFinalPoints * 1.15 + reachBonus * 0.8 + participant.exactScores * 3 + (championAlive ? 70 : 0) - gapToLeader * 0.45)
+      : Math.max(0.25, livePicks.length * 0.5);
+
+    return {
+      ...participant,
+      canReachLeader,
+      championAlive,
+      gapToLeader,
+      livePicks,
+      maximumPossible,
+      picks,
+      possibleFinalPoints,
+      probabilityWeight,
+      status: getContenderStatus({ canReachLeader, championAlive, livePicks, position: participant.position })
+    };
+  });
+
+  const totalWeight = contenders.reduce((sum, contender) => sum + contender.probabilityWeight, 0) || 1;
+
+  return contenders
+    .map((contender) => ({
+      ...contender,
+      probability: Math.round((contender.probabilityWeight / totalWeight) * 100)
+    }))
+    .sort((a, b) => b.probability - a.probability || b.maximumPossible - a.maximumPossible || b.totalPoints - a.totalPoints);
+};
 
 const getKnockoutDetails = (participant, type) =>
   (participant?.pointsDetail ?? [])
@@ -102,7 +228,7 @@ function KnockoutHitList({ participant, type }) {
   );
 }
 
-function RankingTable({ collection, matches = [], onViewCharts, prizes, ranking }) {
+function RankingTable({ collection, finalPredictions = {}, matches = [], onViewCharts, prizes, ranking, settings = {} }) {
   const [openExactParticipantId, setOpenExactParticipantId] = useState('');
   const [openKnockoutDetail, setOpenKnockoutDetail] = useState({ participantId: '', type: '' });
   const leaderPoints = ranking[0]?.totalPoints ?? 0;
@@ -110,24 +236,16 @@ function RankingTable({ collection, matches = [], onViewCharts, prizes, ranking 
   const maxPoints = Math.max(...ranking.map((participant) => participant.totalPoints), 1);
   const maxExactScores = Math.max(...ranking.map((participant) => participant.exactScores), 0);
   const mostExact = ranking.find((participant) => participant.exactScores === maxExactScores && participant.exactScores > 0);
-  const pendingMatches = matches.filter((match) => match.status !== 'jugado').length;
   const featuredParticipant = mostExact ?? ranking[0];
-  const probabilityScores = ranking.map((participant) => {
-    const gap = Math.max(leaderPoints - participant.totalPoints, 0);
-    return {
-      ...participant,
-      probabilityWeight: Math.max(8, participant.totalPoints + pendingMatches * 1.4 - gap * 0.8 + participant.exactScores * 6)
-    };
-  });
-  const totalProbabilityWeight = probabilityScores.reduce((sum, item) => sum + item.probabilityWeight, 0) || 1;
-  const championProbability = probabilityScores.slice(0, 3).map((participant) => ({
-    ...participant,
-    probability: Math.round((participant.probabilityWeight / totalProbabilityWeight) * 100)
-  }));
+  const titleContenders = buildTitleContenders({ finalPredictions, matches, ranking, settings });
+  const championProbability = titleContenders.slice(0, 4);
   const otherProbability = Math.max(
     0,
     100 - championProbability.reduce((sum, participant) => sum + participant.probability, 0)
   );
+  const visibleContenders = titleContenders
+    .filter((participant) => participant.canReachLeader || participant.livePicks.length || participant.position <= 3)
+    .slice(0, 6);
 
   return (
     <section className="stack-list">
@@ -190,8 +308,10 @@ function RankingTable({ collection, matches = [], onViewCharts, prizes, ranking 
                 : 'Aún no hay datos suficientes'}
             </p>
           </article>
-          <article className="spotlight-card champion-odds">
-            <span>🏆 Probabilidad de campeón</span>
+          <article className="spotlight-card champion-odds title-race-card">
+            <span>🏆 Carrera por la polla</span>
+            <strong>{championProbability[0]?.name ?? 'Sin datos'}</strong>
+            <p>Estimación con puntos actuales, posiciones finales vivas y máximo posible.</p>
             <div>
               {championProbability.map((participant) => (
                 <div className="odds-row" key={participant.id}>
@@ -208,6 +328,51 @@ function RankingTable({ collection, matches = [], onViewCharts, prizes, ranking 
             </div>
           </article>
         </div>
+
+        {visibleContenders.length > 0 && (
+          <section className="title-contenders-panel">
+            <div className="title-contenders-heading">
+              <div>
+                <span>🔥 Aspirantes al título</span>
+                <h4>Quiénes todavía pueden ganar la polla</h4>
+              </div>
+              <p>
+                Se calcula con los puntos actuales y los picks finales que siguen vivos: campeón,
+                subcampeón, tercer y cuarto lugar.
+              </p>
+            </div>
+            <div className="title-contenders-grid">
+              {visibleContenders.map((participant) => (
+                <article
+                  className={`title-contender-card ${participant.canReachLeader ? 'alive' : 'remote'}`}
+                  key={participant.id}
+                >
+                  <div className="title-contender-top">
+                    <strong>{participant.name}</strong>
+                    <span>{participant.status}</span>
+                  </div>
+                  <div className="title-contender-metrics">
+                    <span><strong>{participant.totalPoints}</strong> actuales</span>
+                    <span><strong>{participant.maximumPossible}</strong> máximo</span>
+                    <span><strong>{participant.probability}%</strong> opción</span>
+                  </div>
+                  <div className="live-picks-list">
+                    {participant.livePicks.length ? (
+                      participant.livePicks.map((pick) => (
+                        <span key={`${participant.id}-${pick.key}`}>
+                          {pick.icon} {pick.label}: {displayTeam(pick.team)}
+                          <strong>+{pick.points}</strong>
+                        </span>
+                      ))
+                    ) : (
+                      <em>Sin posiciones finales vivas</em>
+                    )}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
 
         <div className="table-wrap ranking-table-wrap">
           <table className="ranking-table">

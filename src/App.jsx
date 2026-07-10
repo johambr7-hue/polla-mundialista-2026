@@ -540,10 +540,12 @@ function App() {
         {!isLoadingData && activeTab === 'ranking' && (
           <RankingTable
             collection={collection}
+            finalPredictions={state.finalPredictions}
             onViewCharts={() => setActiveTab('graficas')}
             prizes={prizes}
             ranking={ranking}
             matches={matchesForScoring}
+            settings={state.settings}
           />
         )}
         {!isLoadingData && activeTab === 'hoy' && (
