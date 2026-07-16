@@ -541,6 +541,7 @@ function App() {
           <RankingTable
             collection={collection}
             finalPredictions={state.finalPredictions}
+            finalResults={state.finalResults}
             onViewCharts={() => setActiveTab('graficas')}
             prizes={prizes}
             ranking={ranking}

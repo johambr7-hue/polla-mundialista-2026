@@ -74,20 +74,50 @@ const addLiveTeam = (teams, team) => {
   teams.set(normalizeTeamName(team), displayTeam(team) || team);
 };
 
-const collectLiveTeams = (matches, finalPredictions) => {
+const mergeTeamMaps = (...maps) => {
+  const teams = new Map();
+  maps.forEach((map) => {
+    map.forEach((name, normalizedName) => teams.set(normalizedName, name));
+  });
+  return teams;
+};
+
+const getMatchStage = (match) => match?.stage ?? match?.phase ?? '';
+
+const getMatchTeams = (match) => [
+  match?.homeTeam ?? match?.home_team ?? '',
+  match?.awayTeam ?? match?.away_team ?? ''
+];
+
+const collectTeamsFromMatches = (matches, stages = [], pendingOnly = true) => {
   const teams = new Map();
 
   matches
-    .filter((match) => isKnockoutMatch(match) && match.status !== 'jugado')
+    .filter((match) => isKnockoutMatch(match))
+    .filter((match) => !stages.length || stages.includes(getMatchStage(match)))
+    .filter((match) => !pendingOnly || match.status !== 'jugado')
     .forEach((match) => {
-      addLiveTeam(teams, match.homeTeam);
-      addLiveTeam(teams, match.awayTeam);
+      getMatchTeams(match).forEach((team) => addLiveTeam(teams, team));
     });
 
+  return teams;
+};
+
+const collectTeamsFromFinalPredictions = (finalPredictions) => {
+  const teams = new Map();
+
+  Object.values(finalPredictions ?? {}).forEach((prediction) => {
+    finalPickConfig.forEach(({ key }) => addLiveTeam(teams, getFinalPredictionValue(prediction, key)));
+  });
+
+  return teams;
+};
+
+const collectLiveTeams = (matches, finalPredictions) => {
+  const teams = collectTeamsFromMatches(matches);
+
   if (!teams.size) {
-    Object.values(finalPredictions ?? {}).forEach((prediction) => {
-      finalPickConfig.forEach(({ key }) => addLiveTeam(teams, getFinalPredictionValue(prediction, key)));
-    });
+    return collectTeamsFromFinalPredictions(finalPredictions);
   }
 
   return teams;
@@ -100,6 +130,45 @@ const getFinalPredictionValue = (prediction, key) => {
   return prediction?.[key] ?? '';
 };
 
+const finalResultsAreComplete = (finalResults = {}) =>
+  finalPickConfig.every(({ key }) => Boolean(getFinalPredictionValue(finalResults, key)));
+
+const buildFinalPickPools = ({ finalPredictions, finalResults = {}, matches = [] }) => {
+  const fallbackTeams = collectLiveTeams(matches, finalPredictions);
+  const finalTeams = collectTeamsFromMatches(matches, ['Final']);
+  const thirdPlaceTeams = collectTeamsFromMatches(matches, ['Tercer puesto']);
+  const semifinalTeams = collectTeamsFromMatches(matches, ['Semifinal', 'Semifinales']);
+  const lateKnockoutTeams = mergeTeamMaps(finalTeams, thirdPlaceTeams, semifinalTeams);
+  const predictionTeams = collectTeamsFromFinalPredictions(finalPredictions);
+
+  const pools = finalPickConfig.reduce((accumulator, { key }) => {
+    const officialTeam = getFinalPredictionValue(finalResults, key);
+    const pool = new Map();
+
+    if (officialTeam) {
+      addLiveTeam(pool, officialTeam);
+    } else if (key === 'champion' || key === 'second') {
+      const sourceTeams = finalTeams.size ? finalTeams : lateKnockoutTeams.size ? lateKnockoutTeams : fallbackTeams;
+      sourceTeams.forEach((team, normalizedTeam) =>
+        pool.set(normalizedTeam, team)
+      );
+    } else {
+      const sourceTeams = thirdPlaceTeams.size ? thirdPlaceTeams : semifinalTeams.size ? semifinalTeams : fallbackTeams;
+      sourceTeams.forEach((team, normalizedTeam) =>
+        pool.set(normalizedTeam, team)
+      );
+    }
+
+    if (!pool.size) {
+      predictionTeams.forEach((team, normalizedTeam) => pool.set(normalizedTeam, team));
+    }
+
+    return { ...accumulator, [key]: pool };
+  }, {});
+
+  return pools;
+};
+
 const getContenderStatus = ({ canReachLeader, championAlive, livePicks, position }) => {
   if (position === 1) return 'Favorito actual';
   if (!livePicks.length) return 'Sin picks vivos';
@@ -108,36 +177,40 @@ const getContenderStatus = ({ canReachLeader, championAlive, livePicks, position
   return 'Necesita milagro';
 };
 
-const buildTitleContenders = ({ finalPredictions = {}, matches = [], ranking = [], settings = {} }) => {
+const buildTitleContenders = ({ finalPredictions = {}, finalResults = {}, matches = [], ranking = [], settings = {} }) => {
   const leaderPoints = ranking[0]?.totalPoints ?? 0;
-  const liveTeams = collectLiveTeams(matches, finalPredictions);
+  const pickPools = buildFinalPickPools({ finalPredictions, finalResults, matches });
   const finalPoints = settings.finalResultsPoints ?? {};
+  const resultsComplete = finalResultsAreComplete(finalResults);
 
   const contenders = ranking.map((participant) => {
     const prediction = finalPredictions[participant.id] ?? {};
     const picks = finalPickConfig.map((config) => {
       const team = getFinalPredictionValue(prediction, config.key);
       const normalizedTeam = normalizeTeamName(team);
-      const isLive = Boolean(team) && liveTeams.has(normalizedTeam);
+      const officialTeam = getFinalPredictionValue(finalResults, config.key);
+      const officialTeamNormalized = normalizeTeamName(officialTeam);
+      const officialResultSet = Boolean(officialTeam);
+      const matchesOfficialResult = officialResultSet && normalizedTeam === officialTeamNormalized;
+      const isStillPossible = Boolean(team) && (officialResultSet ? matchesOfficialResult : pickPools[config.key]?.has(normalizedTeam));
       const points = Number(finalPoints[config.pointsKey] ?? 0);
+      const pointsInPlay = resultsComplete ? 0 : isStillPossible ? points : 0;
 
       return {
         ...config,
-        isLive,
+        isLive: isStillPossible && !resultsComplete,
+        isSecured: matchesOfficialResult && !resultsComplete,
+        pointsInPlay,
         points,
         team
       };
     });
     const livePicks = picks.filter((pick) => pick.isLive);
-    const possibleFinalPoints = livePicks.reduce((sum, pick) => sum + pick.points, 0);
+    const possibleFinalPoints = picks.reduce((sum, pick) => sum + pick.pointsInPlay, 0);
     const maximumPossible = participant.totalPoints + possibleFinalPoints;
     const gapToLeader = Math.max(leaderPoints - participant.totalPoints, 0);
     const canReachLeader = maximumPossible >= leaderPoints;
     const championAlive = livePicks.some((pick) => pick.key === 'champion');
-    const reachBonus = Math.max(maximumPossible - leaderPoints, 0);
-    const probabilityWeight = canReachLeader
-      ? Math.max(2, possibleFinalPoints * 1.15 + reachBonus * 0.8 + participant.exactScores * 3 + (championAlive ? 70 : 0) - gapToLeader * 0.45)
-      : Math.max(0.25, livePicks.length * 0.5);
 
     return {
       ...participant,
@@ -148,14 +221,32 @@ const buildTitleContenders = ({ finalPredictions = {}, matches = [], ranking = [
       maximumPossible,
       picks,
       possibleFinalPoints,
-      probabilityWeight,
       status: getContenderStatus({ canReachLeader, championAlive, livePicks, position: participant.position })
     };
   });
 
-  const totalWeight = contenders.reduce((sum, contender) => sum + contender.probabilityWeight, 0) || 1;
+  const bestMaximum = Math.max(...contenders.map((contender) => contender.maximumPossible), leaderPoints, 1);
+  const contendersWithWeight = contenders.map((contender) => {
+    const reachBonus = Math.max(contender.maximumPossible - leaderPoints, 0);
+    const maxPenalty = Math.max(bestMaximum - contender.maximumPossible, 0) * 0.25;
+    const currentStrength = Math.max(contender.totalPoints, 0) * 0.12;
+    const finalStrength = contender.possibleFinalPoints * 1.25;
+    const championBonus = contender.championAlive ? 55 : 0;
+    const livePickBonus = contender.livePicks.length * 8;
+    const leaderBonus = contender.position === 1 ? 35 : 0;
+    const catchUpPenalty = contender.gapToLeader * 0.35;
+    const probabilityWeight = resultsComplete
+      ? Math.max(1, contender.totalPoints - leaderPoints + 100)
+      : contender.canReachLeader
+        ? Math.max(1, currentStrength + finalStrength + reachBonus + championBonus + livePickBonus + leaderBonus - catchUpPenalty - maxPenalty)
+        : Math.max(0.1, contender.livePicks.length * 0.35 + contender.possibleFinalPoints * 0.03);
 
-  return contenders
+    return { ...contender, probabilityWeight };
+  });
+
+  const totalWeight = contendersWithWeight.reduce((sum, contender) => sum + contender.probabilityWeight, 0) || 1;
+
+  return contendersWithWeight
     .map((contender) => ({
       ...contender,
       probability: Math.round((contender.probabilityWeight / totalWeight) * 100)
@@ -228,7 +319,7 @@ function KnockoutHitList({ participant, type }) {
   );
 }
 
-function RankingTable({ collection, finalPredictions = {}, matches = [], onViewCharts, prizes, ranking, settings = {} }) {
+function RankingTable({ collection, finalPredictions = {}, finalResults = {}, matches = [], onViewCharts, prizes, ranking, settings = {} }) {
   const [openExactParticipantId, setOpenExactParticipantId] = useState('');
   const [openKnockoutDetail, setOpenKnockoutDetail] = useState({ participantId: '', type: '' });
   const leaderPoints = ranking[0]?.totalPoints ?? 0;
@@ -237,7 +328,7 @@ function RankingTable({ collection, finalPredictions = {}, matches = [], onViewC
   const maxExactScores = Math.max(...ranking.map((participant) => participant.exactScores), 0);
   const mostExact = ranking.find((participant) => participant.exactScores === maxExactScores && participant.exactScores > 0);
   const featuredParticipant = mostExact ?? ranking[0];
-  const titleContenders = buildTitleContenders({ finalPredictions, matches, ranking, settings });
+  const titleContenders = buildTitleContenders({ finalPredictions, finalResults, matches, ranking, settings });
   const championProbability = titleContenders.slice(0, 4);
   const otherProbability = Math.max(
     0,
@@ -311,7 +402,7 @@ function RankingTable({ collection, finalPredictions = {}, matches = [], onViewC
           <article className="spotlight-card champion-odds title-race-card">
             <span>🏆 Carrera por la polla</span>
             <strong>{championProbability[0]?.name ?? 'Sin datos'}</strong>
-            <p>Estimación con puntos actuales, posiciones finales vivas y máximo posible.</p>
+            <p>Estimación con resultados oficiales cargados, puntos actuales y máximo posible.</p>
             <div>
               {championProbability.map((participant) => (
                 <div className="odds-row" key={participant.id}>
@@ -337,8 +428,7 @@ function RankingTable({ collection, finalPredictions = {}, matches = [], onViewC
                 <h4>Quiénes todavía pueden ganar la polla</h4>
               </div>
               <p>
-                Se calcula con los puntos actuales y los picks finales que siguen vivos: campeón,
-                subcampeón, tercer y cuarto lugar.
+                Se calcula con los puntos actuales, resultados finales ya cargados y posiciones que todavía siguen vivas.
               </p>
             </div>
             <div className="title-contenders-grid">
