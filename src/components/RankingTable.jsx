@@ -419,10 +419,6 @@ function RankingTable({ collection, finalPredictions = {}, finalResults = {}, ma
     0,
     100 - championProbability.reduce((sum, participant) => sum + participant.probability, 0)
   );
-  const visibleContenders = titleContenders
-    .filter((participant) => participant.canReachLeader || participant.livePicks.length || participant.position <= 3)
-    .slice(0, 6);
-
   return (
     <section className="stack-list">
       <div className="summary-grid">
@@ -459,7 +455,7 @@ function RankingTable({ collection, finalPredictions = {}, finalResults = {}, ma
         </div>
 
         <div className="podium-section">
-          <div className="podium-title">🏆 Podio actual</div>
+          <div className="podium-title">🏆 Resultados finales</div>
           <div className="podium-grid">
             {podiumConfig.map((config, index) => {
               const participant = podium[index];
@@ -515,50 +511,6 @@ function RankingTable({ collection, finalPredictions = {}, finalResults = {}, ma
             </div>
           </article>
         </div>
-
-        {visibleContenders.length > 0 && (
-          <section className="title-contenders-panel">
-            <div className="title-contenders-heading">
-              <div>
-                <span>🔥 Aspirantes al título</span>
-                <h4>Quiénes todavía pueden ganar la polla</h4>
-              </div>
-              <p>
-                Se calcula con los puntos actuales, resultados finales ya cargados y posiciones que todavía siguen vivas.
-              </p>
-            </div>
-            <div className="title-contenders-grid">
-              {visibleContenders.map((participant) => (
-                <article
-                  className={`title-contender-card ${participant.canReachLeader ? 'alive' : 'remote'}`}
-                  key={participant.id}
-                >
-                  <div className="title-contender-top">
-                    <strong>{participant.name}</strong>
-                    <span>{participant.status}</span>
-                  </div>
-                  <div className="title-contender-metrics">
-                    <span><strong>{participant.totalPoints}</strong> actuales</span>
-                    <span><strong>{participant.maximumPossible}</strong> máximo</span>
-                    <span><strong>{participant.probability}%</strong> opción</span>
-                  </div>
-                  <div className="live-picks-list">
-                    {participant.livePicks.length ? (
-                      participant.livePicks.map((pick) => (
-                        <span key={`${participant.id}-${pick.key}`}>
-                          {pick.icon} {pick.label}: {displayTeam(pick.team)}
-                          <strong>+{pick.points}</strong>
-                        </span>
-                      ))
-                    ) : (
-                      <em>Sin posiciones finales vivas</em>
-                    )}
-                  </div>
-                </article>
-              ))}
-            </div>
-          </section>
-        )}
 
         <div className="table-wrap ranking-table-wrap">
           <table className="ranking-table">
