@@ -319,11 +319,96 @@ function KnockoutHitList({ participant, type }) {
   );
 }
 
+const getPhaseTotal = (phaseDetail) =>
+  Number(phaseDetail?.puntos_total_fase ?? phaseDetail?.points ?? 0);
+
+function PodiumPointDetail({ participant }) {
+  const phaseDetails = participant.pointsDetail ?? [];
+  const finalDetail = phaseDetails.find((phaseDetail) => phaseDetail.fase === 'Resultados finales');
+  const finalItems = finalDetail?.detail ?? [];
+
+  return (
+    <section className="podium-detail-panel">
+      <div className="podium-detail-heading">
+        <div>
+          <span>Detalle de puntos</span>
+          <strong>{participant.name}</strong>
+        </div>
+        <p>{participant.totalPoints} pts totales</p>
+      </div>
+
+      <div className="podium-detail-summary">
+        <article>
+          <strong>{participant.groupPoints}</strong>
+          <span>Fase de grupos</span>
+        </article>
+        <article>
+          <strong>{participant.knockoutPoints}</strong>
+          <span>Eliminatorias</span>
+        </article>
+        <article>
+          <strong>{participant.finalPoints}</strong>
+          <span>Resultados finales</span>
+        </article>
+        <article>
+          <strong>{participant.exactScores}</strong>
+          <span>Marcadores exactos</span>
+        </article>
+        <article>
+          <strong>{participant.bracketHits}</strong>
+          <span>Llaves acertadas</span>
+        </article>
+        <article>
+          <strong>{participant.qualifiedTeamHits}</strong>
+          <span>Equipos clasificados</span>
+        </article>
+      </div>
+
+      <div className="podium-detail-columns">
+        <div>
+          <h4>Puntos por fase</h4>
+          <div className="podium-phase-list">
+            {phaseDetails.length ? (
+              phaseDetails.map((phaseDetail) => (
+                <article key={phaseDetail.fase}>
+                  <strong>{phaseDetail.fase}</strong>
+                  <span>{getPhaseTotal(phaseDetail)} pts</span>
+                </article>
+              ))
+            ) : (
+              <p className="muted">Aún no hay detalle de fases.</p>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <h4>Resultados finales acertados</h4>
+          <div className="podium-final-list">
+            {finalItems.length ? (
+              finalItems.map((detail) => (
+                <article key={`${participant.id}-${detail.puesto}`}>
+                  <span>{detail.puesto}</span>
+                  <strong>{displayTeam(detail.equipo) || 'Por definir'}</strong>
+                  <em>+{detail.puntos} pts</em>
+                </article>
+              ))
+            ) : (
+              <p className="muted">No tiene puntos por resultados finales.</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function RankingTable({ collection, finalPredictions = {}, finalResults = {}, matches = [], onViewCharts, prizes, ranking, settings = {} }) {
   const [openExactParticipantId, setOpenExactParticipantId] = useState('');
   const [openKnockoutDetail, setOpenKnockoutDetail] = useState({ participantId: '', type: '' });
+  const [openPodiumParticipantId, setOpenPodiumParticipantId] = useState('');
   const leaderPoints = ranking[0]?.totalPoints ?? 0;
   const podium = ranking.slice(0, 3);
+  const selectedPodiumParticipant = podium.find((participant) => participant.id === openPodiumParticipantId);
   const maxPoints = Math.max(...ranking.map((participant) => participant.totalPoints), 1);
   const maxExactScores = Math.max(...ranking.map((participant) => participant.exactScores), 0);
   const mostExact = ranking.find((participant) => participant.exactScores === maxExactScores && participant.exactScores > 0);
@@ -379,14 +464,25 @@ function RankingTable({ collection, finalPredictions = {}, finalResults = {}, ma
             {podiumConfig.map((config, index) => {
               const participant = podium[index];
               return (
-                <article className={`podium-card ${config.className}`} key={config.label}>
+                <button
+                  aria-expanded={openPodiumParticipantId === participant?.id}
+                  className={`podium-card podium-card-button ${config.className}`}
+                  disabled={!participant}
+                  key={participant?.id ?? config.label}
+                  onClick={() =>
+                    setOpenPodiumParticipantId((current) => (current === participant?.id ? '' : participant?.id ?? ''))
+                  }
+                  type="button"
+                >
                   <span>{config.medal} {config.label}</span>
                   <strong>{participant?.name ?? 'Por definir'}</strong>
                   <p>{participant ? `${participant.totalPoints} pts` : 'Sin datos'}</p>
-                </article>
+                  {participant && <small>Ver detalle</small>}
+                </button>
               );
             })}
           </div>
+          {selectedPodiumParticipant && <PodiumPointDetail participant={selectedPodiumParticipant} />}
         </div>
 
         <div className="ranking-spotlight-grid">

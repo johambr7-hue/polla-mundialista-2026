@@ -448,29 +448,50 @@ export const calculateKnockoutPhaseBreakdown = (participantPredictions, matches,
   );
 };
 
+const finalResultFields = [
+  { key: 'champion', label: 'Campeón', pointsKey: 'champion', aliases: ['champion', 'winner', 'first', 'campeon', 'campeón'] },
+  { key: 'second', label: 'Subcampeón', pointsKey: 'second', aliases: ['second', 'runnerUp', 'runner_up', 'runner', 'subcampeon', 'subcampeón'] },
+  { key: 'third', label: 'Tercer lugar', pointsKey: 'third', aliases: ['third', 'thirdPlace', 'third_place', 'tercero', 'tercerLugar', 'tercer_lugar'] },
+  { key: 'fourth', label: 'Cuarto lugar', pointsKey: 'fourth', aliases: ['fourth', 'fourthPlace', 'fourth_place', 'cuarto', 'cuartoLugar', 'cuarto_lugar'] }
+];
+
+const firstNonEmpty = (...values) =>
+  values.find((value) => String(value ?? '').trim() !== '') ?? '';
+
+const getFinalResultValue = (entry, field) => {
+  const source = entry ?? {};
+  const nested = source.finalResults ?? {};
+  const values = field.aliases.flatMap((alias) => [source[alias], nested[alias]]);
+  return firstNonEmpty(...values);
+};
+
 export const calculateFinalResultsPoints = (prediction, finalResults, settings) => {
   if (!prediction) return { total: 0, hits: {} };
-  const finalResultsComplete =
-    Boolean(finalResults.champion) &&
-    Boolean(finalResults.second) &&
-    Boolean(finalResults.third) &&
-    Boolean(finalResults.fourth);
 
-  if (!finalResultsComplete) return { total: 0, hits: {} };
+  const resultDetails = finalResultFields.map((field) => {
+    const predictedTeam = getFinalResultValue(prediction, field);
+    const officialTeam = getFinalResultValue(finalResults, field);
+    const hit = Boolean(officialTeam) && isSameTeam(predictedTeam, officialTeam);
+    const points = hit ? Number(settings.finalResultsPoints?.[field.pointsKey] ?? 0) : 0;
 
-  const hits = {
-    champion: isSameTeam(prediction.champion, finalResults.champion),
-    second: isSameTeam(prediction.second, finalResults.second),
-    third: isSameTeam(prediction.third, finalResults.third),
-    fourth: isSameTeam(prediction.fourth, finalResults.fourth)
-  };
+    return {
+      key: field.key,
+      tipo: 'resultado_final',
+      puesto: field.label,
+      equipo: predictedTeam,
+      equipo_oficial: officialTeam,
+      puntos: points,
+      acertado: hit
+    };
+  });
 
-  const total = Object.entries(hits).reduce(
-    (sum, [key, hit]) => sum + (hit ? Number(settings.finalResultsPoints[key] ?? 0) : 0),
-    0
+  const hits = resultDetails.reduce(
+    (acc, detail) => ({ ...acc, [detail.key]: detail.acertado }),
+    {}
   );
+  const total = resultDetails.reduce((sum, detail) => sum + detail.puntos, 0);
 
-  return { total, hits };
+  return { total, hits, detail: resultDetails.filter((detail) => detail.acertado) };
 };
 
 export const buildRanking = (participants, matches, predictions, finalPredictions, finalResults, settings) =>
@@ -550,6 +571,17 @@ export const buildRanking = (participants, matches, predictions, finalPrediction
       const finalScore = calculateFinalResultsPoints(finalPredictions[participant.id], finalResults, settings);
       stats.finalPoints = finalScore.total;
       stats.totalPoints += finalScore.total;
+      if (finalScore.detail?.length) {
+        stats.pointsDetail.push({
+          fase: 'Resultados finales',
+          puntos_clasificados: 0,
+          puntos_llaves: 0,
+          puntos_marcadores: 0,
+          puntos_resultados: finalScore.total,
+          puntos_total_fase: finalScore.total,
+          detail: finalScore.detail
+        });
+      }
 
       return { ...participant, ...stats };
     })
