@@ -328,23 +328,26 @@ export const calculatePredictionPoints = (prediction, match, settings) =>
 
 export const calculateKnockoutPhaseBreakdown = (participantPredictions, matches, settings) => {
   const detailsByPhase = {};
+  const matchesById = new Map(matches.map((match) => [match.id, match]));
 
   const knockoutMatches = matches.filter(
     (match) => isRealBracketKnown(match) && isKnockoutPhaseActivated(settings, match.stage)
   );
 
-  knockoutMatches.forEach((match) => {
-    const phaseRules = settings.scoring[match.stage] ?? {};
-    const realTeams = [match.homeTeam, match.awayTeam].filter(Boolean);
-    const realTeamKeys = realTeams.map(teamKey).filter(Boolean);
-    const realPairKey = pairKey(match.homeTeam, match.awayTeam);
-    const matchScorable = isMatchScorable(match);
+  const realTeamsByPhase = knockoutMatches.reduce((acc, match) => {
+    const current = acc.get(match.stage) ?? new Map();
+    [match.homeTeam, match.awayTeam].forEach((team) => {
+      const key = teamKey(team);
+      if (key && !isPlaceholderTeam(key)) current.set(key, team);
+    });
+    acc.set(match.stage, current);
+    return acc;
+  }, new Map());
 
-    if (realTeamKeys.length !== 2 || !realPairKey) return;
-
-    if (!detailsByPhase[match.stage]) {
-      detailsByPhase[match.stage] = {
-        fase: match.stage,
+  const getPhaseDetail = (stage) => {
+    if (!detailsByPhase[stage]) {
+      detailsByPhase[stage] = {
+        fase: stage,
         puntos_clasificados: 0,
         puntos_llaves: 0,
         puntos_marcadores: 0,
@@ -354,41 +357,62 @@ export const calculateKnockoutPhaseBreakdown = (participantPredictions, matches,
         qualifiedTeamHits: 0,
         detail: [],
         countedQualifiedTeams: new Set(),
-        countedBracketPairs: new Set(),
-        countedScorePairs: new Set()
+        countedBracketMatches: new Set(),
+        countedScoreMatches: new Set()
       };
     }
 
-    const phaseDetail = detailsByPhase[match.stage];
-    const phasePredictions = participantPredictions.filter((prediction) => {
-      const predictedMatch = matches.find((item) => item.id === prediction.matchId);
-      return predictedMatch?.stage === match.stage && !prediction.excludedFromScoring;
-    });
+    return detailsByPhase[stage];
+  };
 
-    phasePredictions.forEach((prediction) => {
-      const predictionMatch = matches.find((item) => item.id === prediction.matchId) ?? match;
-      const predictedTeams = getPredictedTeams(prediction, predictionMatch);
+  participantPredictions
+    .filter((prediction) => !prediction.excludedFromScoring)
+    .forEach((prediction) => {
+      const match = matchesById.get(prediction.matchId);
+      if (!match || isGroupStage(match.stage) || !isKnockoutPhaseActivated(settings, match.stage)) return;
+
+      const phaseRules = settings.scoring[match.stage] ?? {};
+      const predictedTeams = getPredictedTeams(prediction, match);
       const predictedTeamKeys = [teamKey(predictedTeams.home), teamKey(predictedTeams.away)]
         .filter(Boolean)
         .filter((team) => !isPlaceholderTeam(team));
-      const predictedPairKey = pairKey(predictedTeams.home, predictedTeams.away);
+      const realTeamsForPhase = realTeamsByPhase.get(match.stage) ?? new Map();
+      const realBracketKnown = isRealBracketKnown(match);
+
+      if (!realTeamsForPhase.size && !realBracketKnown) return;
+
+      const phaseDetail = getPhaseDetail(match.stage);
 
       predictedTeamKeys.forEach((predictedTeamKey) => {
-        if (!realTeamKeys.includes(predictedTeamKey) || phaseDetail.countedQualifiedTeams.has(predictedTeamKey)) return;
+        if (!realTeamsForPhase.has(predictedTeamKey) || phaseDetail.countedQualifiedTeams.has(predictedTeamKey)) return;
 
         phaseDetail.countedQualifiedTeams.add(predictedTeamKey);
         phaseDetail.qualifiedTeamHits += 1;
         phaseDetail.puntos_clasificados += Number(phaseRules.qualifiedTeam ?? 0);
         phaseDetail.detail.push({
           tipo: 'clasificado',
-          equipo: predictedTeams.home && teamKey(predictedTeams.home) === predictedTeamKey ? predictedTeams.home : predictedTeams.away,
+          equipo: realTeamsForPhase.get(predictedTeamKey),
           puntos: Number(phaseRules.qualifiedTeam ?? 0)
         });
       });
 
-      if (predictedPairKey !== realPairKey || phaseDetail.countedBracketPairs.has(realPairKey)) return;
+      if (!realBracketKnown) return;
 
-      phaseDetail.countedBracketPairs.add(realPairKey);
+      const realTeams = [match.homeTeam, match.awayTeam].filter(Boolean);
+      const realPairKey = pairKey(match.homeTeam, match.awayTeam);
+      const predictedPairKey = pairKey(predictedTeams.home, predictedTeams.away);
+      const matchScorable = isMatchScorable(match);
+
+      if (
+        realTeams.length !== 2 ||
+        !realPairKey ||
+        predictedPairKey !== realPairKey ||
+        phaseDetail.countedBracketMatches.has(match.id)
+      ) {
+        return;
+      }
+
+      phaseDetail.countedBracketMatches.add(match.id);
       phaseDetail.bracketHits += 1;
       phaseDetail.puntos_llaves += Number(phaseRules.bracket ?? 0);
       phaseDetail.detail.push({
@@ -399,12 +423,12 @@ export const calculateKnockoutPhaseBreakdown = (participantPredictions, matches,
 
       if (
         matchScorable &&
-        !phaseDetail.countedScorePairs.has(realPairKey) &&
+        !phaseDetail.countedScoreMatches.has(match.id) &&
         prediction.homeScore !== '' &&
         prediction.awayScore !== '' &&
         scoresMatchByTeam(prediction, match)
       ) {
-        phaseDetail.countedScorePairs.add(realPairKey);
+        phaseDetail.countedScoreMatches.add(match.id);
         phaseDetail.exactScoreHits += 1;
         phaseDetail.puntos_marcadores += Number(phaseRules.exactScore ?? 0);
         phaseDetail.detail.push({
@@ -416,7 +440,6 @@ export const calculateKnockoutPhaseBreakdown = (participantPredictions, matches,
         });
       }
     });
-  });
 
   const phases = Object.values(detailsByPhase).map((phaseDetail) => {
     phaseDetail.puntos_total_fase =

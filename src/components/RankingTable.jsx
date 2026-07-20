@@ -682,7 +682,7 @@ function RankingTable({ collection, finalPredictions = {}, finalResults = {}, ma
                     {finalExpanded && (
                       <tr className="ranking-expanded-row">
                         <td colSpan="8">
-                          <FinalResultsHitList participant={participant} />
+                          <PodiumPointDetail participant={participant} />
                         </td>
                       </tr>
                     )}
@@ -798,7 +798,7 @@ function RankingTable({ collection, finalPredictions = {}, finalResults = {}, ma
                   {knockoutExpanded && (
                     <KnockoutHitList participant={participant} type={openKnockoutDetail.type} />
                   )}
-                  {finalExpanded && <FinalResultsHitList participant={participant} />}
+                  {finalExpanded && <PodiumPointDetail participant={participant} />}
                 </details>
               </article>
             );
