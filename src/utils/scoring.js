@@ -449,10 +449,34 @@ export const calculateKnockoutPhaseBreakdown = (participantPredictions, matches,
 };
 
 const finalResultFields = [
-  { key: 'champion', label: 'Campeón', pointsKey: 'champion', aliases: ['champion', 'winner', 'first', 'campeon', 'campeón'] },
-  { key: 'second', label: 'Subcampeón', pointsKey: 'second', aliases: ['second', 'runnerUp', 'runner_up', 'runner', 'subcampeon', 'subcampeón'] },
-  { key: 'third', label: 'Tercer lugar', pointsKey: 'third', aliases: ['third', 'thirdPlace', 'third_place', 'tercero', 'tercerLugar', 'tercer_lugar'] },
-  { key: 'fourth', label: 'Cuarto lugar', pointsKey: 'fourth', aliases: ['fourth', 'fourthPlace', 'fourth_place', 'cuarto', 'cuartoLugar', 'cuarto_lugar'] }
+  {
+    key: 'champion',
+    label: 'Campeón',
+    pointsKey: 'champion',
+    aliases: ['champion', 'winner', 'first', 'firstPlace', 'first_place', 'campeon', 'campeón', 'primerLugar', 'primer_lugar', 'primero', 'ganador'],
+    pointAliases: ['champion', 'winner', 'campeon', 'campeón']
+  },
+  {
+    key: 'second',
+    label: 'Subcampeón',
+    pointsKey: 'second',
+    aliases: ['second', 'runnerUp', 'runner_up', 'runner', 'runnerUpTeam', 'secondPlace', 'second_place', 'subcampeon', 'subcampeón', 'segundo', 'segundoLugar', 'segundo_lugar'],
+    pointAliases: ['second', 'runnerUp', 'runner_up', 'subcampeon', 'subcampeón']
+  },
+  {
+    key: 'third',
+    label: 'Tercer lugar',
+    pointsKey: 'third',
+    aliases: ['third', 'thirdPlace', 'third_place', 'tercero', 'tercerLugar', 'tercer_lugar', 'tercerPuesto', 'tercer_puesto'],
+    pointAliases: ['third', 'thirdPlace', 'third_place', 'tercero']
+  },
+  {
+    key: 'fourth',
+    label: 'Cuarto lugar',
+    pointsKey: 'fourth',
+    aliases: ['fourth', 'fourthPlace', 'fourth_place', 'cuarto', 'cuartoLugar', 'cuarto_lugar', 'cuartoPuesto', 'cuarto_puesto'],
+    pointAliases: ['fourth', 'fourthPlace', 'fourth_place', 'cuarto']
+  }
 ];
 
 const firstNonEmpty = (...values) =>
@@ -461,8 +485,90 @@ const firstNonEmpty = (...values) =>
 const getFinalResultValue = (entry, field) => {
   const source = entry ?? {};
   const nested = source.finalResults ?? {};
-  const values = field.aliases.flatMap((alias) => [source[alias], nested[alias]]);
+  const values = [
+    source[field.key],
+    nested[field.key],
+    ...field.aliases.flatMap((alias) => [source[alias], nested[alias]])
+  ];
   return firstNonEmpty(...values);
+};
+
+const getFinalResultPoints = (settings, field) => {
+  const configuredPoints = firstNonEmpty(
+    settings?.finalResultsPoints?.[field.pointsKey],
+    ...(field.pointAliases ?? []).map((alias) => settings?.finalResultsPoints?.[alias])
+  );
+
+  return Number(configuredPoints || 0);
+};
+
+const hasOfficialScore = (match) =>
+  match &&
+  match.realHomeScore !== '' &&
+  match.realHomeScore !== null &&
+  match.realHomeScore !== undefined &&
+  match.realAwayScore !== '' &&
+  match.realAwayScore !== null &&
+  match.realAwayScore !== undefined;
+
+const getOfficialQualifiedTeam = (match) =>
+  firstNonEmpty(match?.qualifiedTeam, match?.realQualifiedTeam, match?.real_qualified_team);
+
+const getScoreWinnerTeam = (match) => {
+  if (!hasOfficialScore(match)) return '';
+  if (Number(match.realHomeScore) > Number(match.realAwayScore)) return match.homeTeam;
+  if (Number(match.realHomeScore) < Number(match.realAwayScore)) return match.awayTeam;
+  return '';
+};
+
+const getOfficialWinnerTeam = (match) => {
+  const qualifiedTeam = getOfficialQualifiedTeam(match);
+  if (qualifiedTeam && !isPlaceholderTeam(qualifiedTeam)) return qualifiedTeam;
+  return getScoreWinnerTeam(match);
+};
+
+const getOtherMatchTeam = (match, team) => {
+  if (!match || !team) return '';
+  if (isSameTeam(match.homeTeam, team)) return match.awayTeam;
+  if (isSameTeam(match.awayTeam, team)) return match.homeTeam;
+  return '';
+};
+
+const stageMatchesAny = (match, stages) =>
+  stages.some((stage) => normalize(match?.stage ?? match?.phase) === normalize(stage));
+
+const deriveFinalResultsFromMatches = (matches = []) => {
+  const finalMatch = matches.find((match) => stageMatchesAny(match, ['Final']) && hasOfficialScore(match));
+  const thirdPlaceMatch = matches.find(
+    (match) =>
+      stageMatchesAny(match, ['Tercer puesto', 'Tercer y cuarto puesto', 'Tercer / cuarto puesto']) &&
+      hasOfficialScore(match)
+  );
+  const derived = {};
+
+  if (finalMatch) {
+    derived.champion = getOfficialWinnerTeam(finalMatch);
+    derived.second = getOtherMatchTeam(finalMatch, derived.champion);
+  }
+
+  if (thirdPlaceMatch) {
+    derived.third = getOfficialWinnerTeam(thirdPlaceMatch);
+    derived.fourth = getOtherMatchTeam(thirdPlaceMatch, derived.third);
+  }
+
+  return derived;
+};
+
+export const resolveFinalResults = (finalResults = {}, matches = []) => {
+  const derived = deriveFinalResultsFromMatches(matches);
+
+  return finalResultFields.reduce(
+    (acc, field) => ({
+      ...acc,
+      [field.key]: firstNonEmpty(getFinalResultValue(finalResults, field), derived[field.key])
+    }),
+    {}
+  );
 };
 
 export const calculateFinalResultsPoints = (prediction, finalResults, settings) => {
@@ -472,7 +578,7 @@ export const calculateFinalResultsPoints = (prediction, finalResults, settings) 
     const predictedTeam = getFinalResultValue(prediction, field);
     const officialTeam = getFinalResultValue(finalResults, field);
     const hit = Boolean(officialTeam) && isSameTeam(predictedTeam, officialTeam);
-    const points = hit ? Number(settings.finalResultsPoints?.[field.pointsKey] ?? 0) : 0;
+    const points = hit ? getFinalResultPoints(settings, field) : 0;
 
     return {
       key: field.key,
@@ -494,8 +600,10 @@ export const calculateFinalResultsPoints = (prediction, finalResults, settings) 
   return { total, hits, detail: resultDetails.filter((detail) => detail.acertado) };
 };
 
-export const buildRanking = (participants, matches, predictions, finalPredictions, finalResults, settings) =>
-  participants
+export const buildRanking = (participants, matches, predictions, finalPredictions, finalResults, settings) => {
+  const resolvedFinalResults = resolveFinalResults(finalResults, matches);
+
+  return participants
     .map((participant) => {
       const participantPredictions = predictions.filter((item) => item.participantId === participant.id);
       const groupDetail = {
@@ -568,7 +676,7 @@ export const buildRanking = (participants, matches, predictions, finalPrediction
         ...knockoutScore.details
       ];
 
-      const finalScore = calculateFinalResultsPoints(finalPredictions[participant.id], finalResults, settings);
+      const finalScore = calculateFinalResultsPoints(finalPredictions[participant.id], resolvedFinalResults, settings);
       stats.finalPoints = finalScore.total;
       stats.totalPoints += finalScore.total;
       if (finalScore.detail?.length) {
@@ -587,6 +695,7 @@ export const buildRanking = (participants, matches, predictions, finalPrediction
     })
     .sort((a, b) => b.totalPoints - a.totalPoints || b.exactScores - a.exactScores || a.name.localeCompare(b.name))
     .map((participant, index) => ({ ...participant, position: index + 1 }));
+};
 
 export const recalcularPuntos = ({ participants, matches, predictions, finalPredictions, finalResults, settings }) =>
   buildRanking(participants, matches, predictions, finalPredictions, finalResults, settings);

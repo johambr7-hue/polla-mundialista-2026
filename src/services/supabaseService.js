@@ -27,6 +27,42 @@ const normalizeName = (value) =>
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/\s+/g, ' ');
+const finalResultAliases = {
+  champion: ['champion', 'winner', 'first', 'firstPlace', 'first_place', 'campeon', 'campeón', 'primerLugar', 'primer_lugar', 'primero', 'ganador'],
+  second: ['second', 'runnerUp', 'runner_up', 'runner', 'runnerUpTeam', 'secondPlace', 'second_place', 'subcampeon', 'subcampeón', 'segundo', 'segundoLugar', 'segundo_lugar'],
+  third: ['third', 'thirdPlace', 'third_place', 'tercero', 'tercerLugar', 'tercer_lugar', 'tercerPuesto', 'tercer_puesto'],
+  fourth: ['fourth', 'fourthPlace', 'fourth_place', 'cuarto', 'cuartoLugar', 'cuarto_lugar', 'cuartoPuesto', 'cuarto_puesto']
+};
+const firstFilled = (...values) => values.find((value) => String(value ?? '').trim() !== '') ?? '';
+const getFinalResultFieldValue = (entry = {}, key) => {
+  const source = entry ?? {};
+  const nested = source.finalResults ?? {};
+  const aliases = finalResultAliases[key] ?? [key];
+
+  return asEmptyString(firstFilled(
+    source[key],
+    nested[key],
+    ...aliases.flatMap((alias) => [source[alias], nested[alias]])
+  ));
+};
+const normalizeFinalResults = (entry = {}) => ({
+  champion: getFinalResultFieldValue(entry, 'champion'),
+  second: getFinalResultFieldValue(entry, 'second'),
+  third: getFinalResultFieldValue(entry, 'third'),
+  fourth: getFinalResultFieldValue(entry, 'fourth')
+});
+const asPlainObject = (value) => (value && typeof value === 'object' && !Array.isArray(value) ? value : {});
+const mergeFinalResults = (...entries) =>
+  entries.reduce((accumulator, entry) => {
+    const normalized = normalizeFinalResults(entry);
+
+    return {
+      champion: normalized.champion || accumulator.champion,
+      second: normalized.second || accumulator.second,
+      third: normalized.third || accumulator.third,
+      fourth: normalized.fourth || accumulator.fourth
+    };
+  }, normalizeFinalResults());
 const getMatchCode = (match) => match.matchCode ?? match.match_code ?? `match-${match.matchNumber ?? match.id}`;
 const lateEntryExclusions = [
   {
@@ -146,58 +182,96 @@ const paymentToRow = (payment) => ({
   paid_at: payment.paidAt || null
 });
 
-const tournamentPredictionFromRow = (row) => ({
-  participantId: row.participant_id,
-  finalResults: {
-    champion: row.champion ?? '',
-    second: row.runner_up ?? '',
-    third: row.third_place ?? '',
-    fourth: row.fourth_place ?? ''
-  },
-  champion: row.champion ?? '',
-  second: row.runner_up ?? '',
-  third: row.third_place ?? '',
-  fourth: row.fourth_place ?? '',
-  pointsChampion: Number(row.points_champion ?? 0),
-  pointsRunnerUp: Number(row.points_runner_up ?? 0),
-  pointsThirdPlace: Number(row.points_third_place ?? 0),
-  pointsFourthPlace: Number(row.points_fourth_place ?? 0),
-  pointsTotal: Number(row.points_total ?? 0)
-});
+const tournamentPredictionFromRow = (row) => {
+  const finalResults = normalizeFinalResults({
+    champion: row.champion,
+    runner_up: row.runner_up,
+    third_place: row.third_place,
+    fourth_place: row.fourth_place
+  });
 
-const tournamentPredictionToRow = (entry) => withUuid({
-  participant_id: entry.participantId,
-  champion: asEmptyString(entry.finalResults?.champion ?? entry.champion),
-  runner_up: asEmptyString(entry.finalResults?.second ?? entry.second ?? entry.runnerUp),
-  third_place: asEmptyString(entry.finalResults?.third ?? entry.third),
-  fourth_place: asEmptyString(entry.finalResults?.fourth ?? entry.fourth),
-  points_champion: Number(entry.pointsChampion ?? 0),
-  points_runner_up: Number(entry.pointsRunnerUp ?? 0),
-  points_third_place: Number(entry.pointsThirdPlace ?? 0),
-  points_fourth_place: Number(entry.pointsFourthPlace ?? 0),
-  points_total: Number(entry.pointsTotal ?? 0)
-}, entry.id);
+  return {
+    participantId: row.participant_id,
+    finalResults,
+    ...finalResults,
+    pointsChampion: Number(row.points_champion ?? 0),
+    pointsRunnerUp: Number(row.points_runner_up ?? 0),
+    pointsThirdPlace: Number(row.points_third_place ?? 0),
+    pointsFourthPlace: Number(row.points_fourth_place ?? 0),
+    pointsTotal: Number(row.points_total ?? 0)
+  };
+};
 
-const settingFromRow = (row) => row.value ?? {};
+const tournamentPredictionToRow = (entry) => {
+  const finalResults = normalizeFinalResults(entry);
+
+  return withUuid({
+    participant_id: entry.participantId,
+    champion: asEmptyString(finalResults.champion),
+    runner_up: asEmptyString(finalResults.second),
+    third_place: asEmptyString(finalResults.third),
+    fourth_place: asEmptyString(finalResults.fourth),
+    points_champion: Number(entry.pointsChampion ?? 0),
+    points_runner_up: Number(entry.pointsRunnerUp ?? 0),
+    points_third_place: Number(entry.pointsThirdPlace ?? 0),
+    points_fourth_place: Number(entry.pointsFourthPlace ?? 0),
+    points_total: Number(entry.pointsTotal ?? 0)
+  }, entry.id);
+};
+
+const settingFromRow = (row) => {
+  const value = row?.value ?? {};
+
+  if (typeof value !== 'string') return value;
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+};
 
 const normalizeSettings = (rows) => {
-  if (!rows?.length) return defaultSettings;
-  const settingsRow = rows.find((row) => row.key === 'official') ?? rows[0];
-  return {
+  if (!rows?.length) {
+    return {
+      ...defaultSettings,
+      finalResults: normalizeFinalResults(defaultSettings.finalResults ?? defaultSettings)
+    };
+  }
+
+  const officialSettingsRow = rows.find((row) => row.key === 'official');
+  const settingsByKey = rows.reduce((accumulator, row) => {
+    if (!row?.key || row.key === 'official') return accumulator;
+
+    return {
+      ...accumulator,
+      [row.key]: settingFromRow(row)
+    };
+  }, {});
+  const rawSettings = {
+    ...settingsByKey,
+    ...asPlainObject(settingFromRow(officialSettingsRow ?? rows[0]))
+  };
+  const mergedSettings = {
     ...defaultSettings,
-    ...settingFromRow(settingsRow),
+    ...rawSettings,
     scoring: {
       ...defaultSettings.scoring,
-      ...(settingFromRow(settingsRow).scoring ?? {})
+      ...asPlainObject(rawSettings.scoring)
     },
     finalResultsPoints: {
       ...defaultSettings.finalResultsPoints,
-      ...(settingFromRow(settingsRow).finalResultsPoints ?? {})
+      ...asPlainObject(rawSettings.finalResultsPoints)
     },
     knockoutPhaseActivation: {
       ...defaultSettings.knockoutPhaseActivation,
-      ...(settingFromRow(settingsRow).knockoutPhaseActivation ?? {})
+      ...asPlainObject(rawSettings.knockoutPhaseActivation)
     }
+  };
+
+  return {
+    ...mergedSettings,
+    finalResults: normalizeFinalResults({ ...mergedSettings, finalResults: mergedSettings.finalResults })
   };
 };
 
@@ -438,17 +512,20 @@ export const loadSupabaseState = async () => {
         }
       : prediction;
   });
+  const settingsFinalPredictions = settings.finalPredictions ?? {};
+  const finalPredictionParticipantIds = [
+    ...new Set([
+      ...Object.keys(settingsFinalPredictions),
+      ...Object.keys(tournamentEntries)
+    ])
+  ];
   const finalPredictions = Object.fromEntries(
-    Object.entries(tournamentEntries).map(([participantId, entry]) => [
+    finalPredictionParticipantIds.map((participantId) => [
       participantId,
-      {
-        champion: entry.finalResults?.champion ?? entry.champion ?? '',
-        second: entry.finalResults?.second ?? entry.second ?? '',
-        third: entry.finalResults?.third ?? entry.third ?? '',
-        fourth: entry.finalResults?.fourth ?? entry.fourth ?? ''
-      }
+      mergeFinalResults(settingsFinalPredictions[participantId], tournamentEntries[participantId])
     ])
   );
+  const finalResults = normalizeFinalResults({ ...settings, finalResults: settings.finalResults });
 
   return {
     participants: participantsWithPayments,
@@ -456,11 +533,14 @@ export const loadSupabaseState = async () => {
     predictions: predictionsWithExclusions,
     tournamentEntries,
     finalPredictions,
-    finalResults: { champion: '', second: '', third: '', fourth: '' },
+    finalResults,
     importAudits: [],
     payments,
     scoreDetails,
-    settings
+    settings: {
+      ...settings,
+      finalResults
+    }
   };
 };
 
@@ -544,8 +624,10 @@ export const migrateInitialDataToSupabase = async (sourceState, onProgress = () 
   const predictions = sourceState.predictions ?? [];
   const tournamentEntries = sourceState.tournamentEntries ?? {};
   const finalPredictions = sourceState.finalPredictions ?? {};
-  const settings = { ...defaultSettings, ...(sourceState.settings ?? {}) };
-  const finalResults = sourceState.finalResults ?? { champion: '', second: '', third: '', fourth: '' };
+  const finalResults = normalizeFinalResults(
+    sourceState.finalResults ?? sourceState.settings?.finalResults ?? sourceState.settings ?? {}
+  );
+  const settings = { ...defaultSettings, ...(sourceState.settings ?? {}), finalResults };
 
   onProgress('Consultando registros actuales en Supabase...');
   const [

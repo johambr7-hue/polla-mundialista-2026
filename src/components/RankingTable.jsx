@@ -17,6 +17,12 @@ const finalPickConfig = [
   { icon: '🥉', key: 'third', label: 'Tercer lugar', pointsKey: 'third' },
   { icon: '4', key: 'fourth', label: 'Cuarto lugar', pointsKey: 'fourth' }
 ];
+const finalPredictionAliases = {
+  champion: ['champion', 'winner', 'first', 'firstPlace', 'first_place', 'campeon', 'campeón', 'primerLugar', 'primer_lugar', 'primero', 'ganador'],
+  second: ['second', 'runnerUp', 'runner_up', 'runner', 'runnerUpTeam', 'secondPlace', 'second_place', 'subcampeon', 'subcampeón', 'segundo', 'segundoLugar', 'segundo_lugar'],
+  third: ['third', 'thirdPlace', 'third_place', 'tercero', 'tercerLugar', 'tercer_lugar', 'tercerPuesto', 'tercer_puesto'],
+  fourth: ['fourth', 'fourthPlace', 'fourth_place', 'cuarto', 'cuartoLugar', 'cuarto_lugar', 'cuartoPuesto', 'cuarto_puesto']
+};
 
 const getTrend = (participant) => {
   if (!participant.previousPosition) return '➡️';
@@ -124,10 +130,17 @@ const collectLiveTeams = (matches, finalPredictions) => {
 };
 
 const getFinalPredictionValue = (prediction, key) => {
-  if (key === 'second') return prediction?.second ?? prediction?.runnerUp ?? prediction?.runner_up ?? '';
-  if (key === 'third') return prediction?.third ?? prediction?.thirdPlace ?? prediction?.third_place ?? '';
-  if (key === 'fourth') return prediction?.fourth ?? prediction?.fourthPlace ?? prediction?.fourth_place ?? '';
-  return prediction?.[key] ?? '';
+  const source = prediction ?? {};
+  const nested = source.finalResults ?? {};
+  const aliases = finalPredictionAliases[key] ?? [key];
+
+  return (
+    [
+      source[key],
+      nested[key],
+      ...aliases.flatMap((alias) => [source[alias], nested[alias]])
+    ].find((value) => String(value ?? '').trim() !== '') ?? ''
+  );
 };
 
 const finalResultsAreComplete = (finalResults = {}) =>
@@ -319,13 +332,43 @@ function KnockoutHitList({ participant, type }) {
   );
 }
 
+const getFinalResultDetails = (participant) =>
+  (participant?.pointsDetail ?? []).find((phaseDetail) => phaseDetail.fase === 'Resultados finales')?.detail ?? [];
+
+function FinalResultsHitList({ participant }) {
+  const finalItems = getFinalResultDetails(participant);
+
+  return (
+    <div className="knockout-hit-list final-hit-list">
+      <div className="knockout-hit-header">
+        <strong>Resultados finales acertados</strong>
+        <span>{participant.name}</span>
+      </div>
+      {finalItems.length ? (
+        <section className="knockout-hit-phase">
+          <h4>Resultados finales del torneo</h4>
+          <div>
+            {finalItems.map((detail) => (
+              <article key={`${participant.id}-${detail.key ?? detail.puesto}`}>
+                <strong>{detail.puesto}: {displayTeam(detail.equipo) || 'Por definir'}</strong>
+                <em>+{detail.puntos} pts</em>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : (
+        <p className="muted">No acertó campeón, subcampeón, tercer lugar ni cuarto lugar.</p>
+      )}
+    </div>
+  );
+}
+
 const getPhaseTotal = (phaseDetail) =>
   Number(phaseDetail?.puntos_total_fase ?? phaseDetail?.points ?? 0);
 
 function PodiumPointDetail({ participant }) {
   const phaseDetails = participant.pointsDetail ?? [];
-  const finalDetail = phaseDetails.find((phaseDetail) => phaseDetail.fase === 'Resultados finales');
-  const finalItems = finalDetail?.detail ?? [];
+  const finalItems = getFinalResultDetails(participant);
 
   return (
     <section className="podium-detail-panel">
@@ -393,7 +436,7 @@ function PodiumPointDetail({ participant }) {
                 </article>
               ))
             ) : (
-              <p className="muted">No tiene puntos por resultados finales.</p>
+              <p className="muted">No acertó campeón, subcampeón, tercer lugar ni cuarto lugar.</p>
             )}
           </div>
         </div>
@@ -406,6 +449,7 @@ function RankingTable({ collection, finalPredictions = {}, finalResults = {}, ma
   const [openExactParticipantId, setOpenExactParticipantId] = useState('');
   const [openKnockoutDetail, setOpenKnockoutDetail] = useState({ participantId: '', type: '' });
   const [openPodiumParticipantId, setOpenPodiumParticipantId] = useState('');
+  const [openFinalDetailParticipantId, setOpenFinalDetailParticipantId] = useState('');
   const leaderPoints = ranking[0]?.totalPoints ?? 0;
   const podium = ranking.slice(0, 3);
   const selectedPodiumParticipant = podium.find((participant) => participant.id === openPodiumParticipantId);
@@ -534,6 +578,7 @@ function RankingTable({ collection, finalPredictions = {}, finalResults = {}, ma
                 const exactDetails = getExactScoreDetails(participant);
                 const exactExpanded = openExactParticipantId === participant.id;
                 const knockoutExpanded = openKnockoutDetail.participantId === participant.id;
+                const finalExpanded = openFinalDetailParticipantId === participant.id;
 
                 return (
                   <Fragment key={participant.id}>
@@ -574,7 +619,19 @@ function RankingTable({ collection, finalPredictions = {}, finalResults = {}, ma
                       <td>
                         <div className="ranking-detail-grid">
                           <span><strong>{participant.knockoutPoints}</strong> pts eliminatorias</span>
-                          <span><strong>{participant.finalPoints}</strong> pts finales</span>
+                          <button
+                            aria-expanded={finalExpanded}
+                            className="ranking-detail-button"
+                            onClick={() =>
+                              setOpenFinalDetailParticipantId((current) =>
+                                current === participant.id ? '' : participant.id
+                              )
+                            }
+                            title={`Ver resultados finales acertados de ${participant.name}`}
+                            type="button"
+                          >
+                            <strong>{participant.finalPoints}</strong> resultados finales
+                          </button>
                           <button
                             aria-expanded={knockoutExpanded && openKnockoutDetail.type === 'llave'}
                             className="ranking-detail-button"
@@ -622,6 +679,13 @@ function RankingTable({ collection, finalPredictions = {}, finalResults = {}, ma
                         </td>
                       </tr>
                     )}
+                    {finalExpanded && (
+                      <tr className="ranking-expanded-row">
+                        <td colSpan="8">
+                          <FinalResultsHitList participant={participant} />
+                        </td>
+                      </tr>
+                    )}
                   </Fragment>
                 );
               })}
@@ -637,6 +701,7 @@ function RankingTable({ collection, finalPredictions = {}, finalResults = {}, ma
             const exactDetails = getExactScoreDetails(participant);
             const exactExpanded = openExactParticipantId === participant.id;
             const knockoutExpanded = openKnockoutDetail.participantId === participant.id;
+            const finalExpanded = openFinalDetailParticipantId === participant.id;
 
             return (
               <article className={podiumItem ? `ranking-mobile-card ${podiumItem.className}` : 'ranking-mobile-card'} key={participant.id}>
@@ -689,7 +754,18 @@ function RankingTable({ collection, finalPredictions = {}, finalResults = {}, ma
                     <span><strong>{trend}</strong> Tendencia</span>
                     <span><strong>{participant.groupPoints}</strong> Fase grupos</span>
                     <span><strong>{participant.knockoutPoints}</strong> Eliminatorias</span>
-                    <span><strong>{participant.finalPoints}</strong> Resultados finales</span>
+                    <button
+                      aria-expanded={finalExpanded}
+                      className="mobile-detail-action"
+                      onClick={() =>
+                        setOpenFinalDetailParticipantId((current) =>
+                          current === participant.id ? '' : participant.id
+                        )
+                      }
+                      type="button"
+                    >
+                      <strong>{participant.finalPoints}</strong> Resultados finales
+                    </button>
                     <button
                       aria-expanded={knockoutExpanded && openKnockoutDetail.type === 'llave'}
                       className="mobile-detail-action"
@@ -722,6 +798,7 @@ function RankingTable({ collection, finalPredictions = {}, finalResults = {}, ma
                   {knockoutExpanded && (
                     <KnockoutHitList participant={participant} type={openKnockoutDetail.type} />
                   )}
+                  {finalExpanded && <FinalResultsHitList participant={participant} />}
                 </details>
               </article>
             );
