@@ -63,6 +63,8 @@ const mergeFinalResults = (...entries) =>
       fourth: normalized.fourth || accumulator.fourth
     };
   }, normalizeFinalResults());
+const hasFinalResultValue = (entry = {}) =>
+  Object.values(normalizeFinalResults(entry)).some((value) => String(value ?? '').trim() !== '');
 const getMatchCode = (match) => match.matchCode ?? match.match_code ?? `match-${match.matchNumber ?? match.id}`;
 const lateEntryExclusions = [
   {
@@ -901,8 +903,12 @@ export const migrateInitialDataToSupabase = async (sourceState, onProgress = () 
         continue;
       }
 
-      const finalPrediction = finalPredictions[participant.id] ?? tournamentEntries[participant.id]?.finalResults;
-      if (!finalPrediction) {
+      const finalPrediction = mergeFinalResults(
+        finalPredictions[participant.id],
+        tournamentEntries[participant.id]?.finalResults,
+        tournamentEntries[participant.id]
+      );
+      if (!hasFinalResultValue(finalPrediction)) {
         summary.omitted.push(`Resultado final omitido sin datos: ${participant.name}`);
         continue;
       }
@@ -952,7 +958,50 @@ export const migrateInitialDataToSupabase = async (sourceState, onProgress = () 
       const matchId = matchIdMap.get(prediction.matchId);
       return participantId && matchId ? [{ ...prediction, participantId, matchId }] : [];
     });
-    const ranking = buildRanking(mappedParticipants, mappedMatches, mappedPredictions, finalPredictions, finalResults, settings);
+    const mappedFinalPredictions = Object.fromEntries(
+      participants
+        .map((participant) => {
+          const participantId = participantIdMap.get(participant.id) ?? participant.id;
+          const finalPrediction = mergeFinalResults(
+            finalPredictions[participant.id],
+            tournamentEntries[participant.id]?.finalResults,
+            tournamentEntries[participant.id]
+          );
+
+          return [participantId, finalPrediction];
+        })
+        .filter(([, finalPrediction]) => hasFinalResultValue(finalPrediction))
+    );
+    const mappedTournamentEntries = Object.fromEntries(
+      participants
+        .map((participant) => {
+          const participantId = participantIdMap.get(participant.id) ?? participant.id;
+          const finalPrediction = mergeFinalResults(
+            finalPredictions[participant.id],
+            tournamentEntries[participant.id]?.finalResults,
+            tournamentEntries[participant.id]
+          );
+
+          return [
+            participantId,
+            {
+              ...(tournamentEntries[participant.id] ?? {}),
+              participantId,
+              finalResults: finalPrediction
+            }
+          ];
+        })
+        .filter(([, entry]) => hasFinalResultValue(entry.finalResults))
+    );
+    const ranking = buildRanking(
+      mappedParticipants,
+      mappedMatches,
+      mappedPredictions,
+      mappedFinalPredictions,
+      finalResults,
+      settings,
+      mappedTournamentEntries
+    );
     const scoreDetails = ranking.flatMap((participant) =>
       (participant.pointsDetail ?? []).map((detail) => ({
         participantId: participant.id,

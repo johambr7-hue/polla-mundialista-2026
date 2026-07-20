@@ -534,16 +534,27 @@ const getOtherMatchTeam = (match, team) => {
   return '';
 };
 
-const stageMatchesAny = (match, stages) =>
-  stages.some((stage) => normalize(match?.stage ?? match?.phase) === normalize(stage));
+const normalizedMatchStage = (match) => normalize(match?.stage ?? match?.phase);
+
+const isFinalMatchStage = (match) => {
+  const stage = normalizedMatchStage(match);
+  return stage === 'final' || Number(match?.matchNumber) === 104;
+};
+
+const isThirdPlaceMatchStage = (match) => {
+  const stage = normalizedMatchStage(match);
+  return (
+    stage.includes('tercer') ||
+    stage.includes('third') ||
+    stage.includes('cuarto puesto') ||
+    stage.includes('fourth') ||
+    Number(match?.matchNumber) === 103
+  );
+};
 
 const deriveFinalResultsFromMatches = (matches = []) => {
-  const finalMatch = matches.find((match) => stageMatchesAny(match, ['Final']) && hasOfficialScore(match));
-  const thirdPlaceMatch = matches.find(
-    (match) =>
-      stageMatchesAny(match, ['Tercer puesto', 'Tercer y cuarto puesto', 'Tercer / cuarto puesto']) &&
-      hasOfficialScore(match)
-  );
+  const finalMatch = matches.find((match) => isFinalMatchStage(match) && hasOfficialScore(match));
+  const thirdPlaceMatch = matches.find((match) => isThirdPlaceMatchStage(match) && hasOfficialScore(match));
   const derived = {};
 
   if (finalMatch) {
@@ -600,7 +611,24 @@ export const calculateFinalResultsPoints = (prediction, finalResults, settings) 
   return { total, hits, detail: resultDetails.filter((detail) => detail.acertado) };
 };
 
-export const buildRanking = (participants, matches, predictions, finalPredictions, finalResults, settings) => {
+export const mergeFinalResultEntries = (...entries) =>
+  finalResultFields.reduce(
+    (acc, field) => ({
+      ...acc,
+      [field.key]: firstNonEmpty(...entries.map((entry) => getFinalResultValue(entry, field)))
+    }),
+    {}
+  );
+
+export const buildRanking = (
+  participants,
+  matches,
+  predictions,
+  finalPredictions = {},
+  finalResults = {},
+  settings = {},
+  tournamentEntries = {}
+) => {
   const resolvedFinalResults = resolveFinalResults(finalResults, matches);
 
   return participants
@@ -676,7 +704,13 @@ export const buildRanking = (participants, matches, predictions, finalPrediction
         ...knockoutScore.details
       ];
 
-      const finalScore = calculateFinalResultsPoints(finalPredictions[participant.id], resolvedFinalResults, settings);
+      const finalPrediction = mergeFinalResultEntries(
+        tournamentEntries?.[participant.id]?.finalResults,
+        tournamentEntries?.[participant.id],
+        finalPredictions?.[participant.id]?.finalResults,
+        finalPredictions?.[participant.id]
+      );
+      const finalScore = calculateFinalResultsPoints(finalPrediction, resolvedFinalResults, settings);
       stats.finalPoints = finalScore.total;
       stats.totalPoints += finalScore.total;
       if (finalScore.detail?.length) {
@@ -697,8 +731,8 @@ export const buildRanking = (participants, matches, predictions, finalPrediction
     .map((participant, index) => ({ ...participant, position: index + 1 }));
 };
 
-export const recalcularPuntos = ({ participants, matches, predictions, finalPredictions, finalResults, settings }) =>
-  buildRanking(participants, matches, predictions, finalPredictions, finalResults, settings);
+export const recalcularPuntos = ({ participants, matches, predictions, finalPredictions, finalResults, settings, tournamentEntries }) =>
+  buildRanking(participants, matches, predictions, finalPredictions, finalResults, settings, tournamentEntries);
 
 export const calculateCollection = (participants, entryFee) => {
   const paidParticipants = participants.filter((participant) => participant.paid);

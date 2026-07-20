@@ -38,7 +38,13 @@ import {
 } from './services/supabaseService';
 import { downloadCsv } from './utils/exportCsv';
 import { resolveOfficialMatches } from './utils/officialBracket';
-import { buildRanking, calculateCollection, calculatePrizes } from './utils/scoring';
+import {
+  buildRanking,
+  calculateCollection,
+  calculatePrizes,
+  mergeFinalResultEntries,
+  resolveFinalResults
+} from './utils/scoring';
 import { buildBracket } from './utils/tournament';
 
 const tabs = [
@@ -148,6 +154,27 @@ const mergePredictionsForScoring = (predictions, tournamentEntries, sourceMatche
   return [...merged.values()];
 };
 
+const mergeFinalPredictionsForScoring = (finalPredictions = {}, tournamentEntries = {}) => {
+  const participantIds = [
+    ...new Set([
+      ...Object.keys(finalPredictions ?? {}),
+      ...Object.keys(tournamentEntries ?? {})
+    ])
+  ];
+
+  return Object.fromEntries(
+    participantIds.map((participantId) => [
+      participantId,
+      mergeFinalResultEntries(
+        tournamentEntries?.[participantId]?.finalResults,
+        tournamentEntries?.[participantId],
+        finalPredictions?.[participantId]?.finalResults,
+        finalPredictions?.[participantId]
+      )
+    ])
+  );
+};
+
 const formatError = (error, fallback) => {
   if (!error) return fallback;
   const parts = [error.message, error.details, error.hint, error.code].filter(Boolean);
@@ -210,9 +237,19 @@ function App() {
     [state.matches]
   );
 
+  const officialFinalResults = useMemo(
+    () => resolveFinalResults(state.finalResults, matchesForScoring),
+    [state.finalResults, matchesForScoring]
+  );
+
   const predictionsForScoring = useMemo(
     () => mergePredictionsForScoring(state.predictions, state.tournamentEntries, state.matches, matchesForScoring),
     [state.predictions, state.tournamentEntries, state.matches, matchesForScoring]
+  );
+
+  const finalPredictionsForScoring = useMemo(
+    () => mergeFinalPredictionsForScoring(state.finalPredictions, state.tournamentEntries),
+    [state.finalPredictions, state.tournamentEntries]
   );
 
   const ranking = useMemo(
@@ -221,11 +258,20 @@ function App() {
         state.participants,
         matchesForScoring,
         predictionsForScoring,
-        state.finalPredictions,
-        state.finalResults,
-        state.settings
+        finalPredictionsForScoring,
+        officialFinalResults,
+        state.settings,
+        state.tournamentEntries
       ),
-    [state.participants, matchesForScoring, predictionsForScoring, state.finalPredictions, state.finalResults, state.settings]
+    [
+      state.participants,
+      matchesForScoring,
+      predictionsForScoring,
+      finalPredictionsForScoring,
+      officialFinalResults,
+      state.settings,
+      state.tournamentEntries
+    ]
   );
 
   const collection = useMemo(
@@ -540,8 +586,8 @@ function App() {
         {!isLoadingData && activeTab === 'ranking' && (
           <RankingTable
             collection={collection}
-            finalPredictions={state.finalPredictions}
-            finalResults={state.finalResults}
+            finalPredictions={finalPredictionsForScoring}
+            finalResults={officialFinalResults}
             onViewCharts={() => setActiveTab('graficas')}
             prizes={prizes}
             ranking={ranking}
@@ -570,7 +616,7 @@ function App() {
         {activeTab === 'predicciones' && (
           <PredictionPanel
             currentParticipantId={currentParticipantId}
-            finalPredictions={state.finalPredictions}
+            finalPredictions={finalPredictionsForScoring}
             isAdmin={isAdmin}
             matches={state.matches}
             participants={state.participants}
